@@ -1,20 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import SiteNav from "@/components/SiteNav";
 
 export const metadata: Metadata = {
-  title: "Nam Thanh Travel Open · 32 Đội",
-  description: "Giải đấu single-elimination cho 32 đội",
+  title: "Nam Thanh Travel Open · Giải đấu 32 Đội",
+  description: "Trang quản lý sơ đồ thi đấu single-elimination 32 đội — Nam Thanh Travel Open",
 };
 
 export default function RootLayout({
@@ -23,10 +13,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+    <html lang="vi">
+      <body className="antialiased">
+        <SiteNav />
         {children}
       </body>
     </html>

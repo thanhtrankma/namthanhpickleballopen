@@ -5,6 +5,7 @@ import {
   Trophy, RotateCcw, Edit3, Check, Plane,
   Phone, Globe, Facebook, MapPin,
 } from "lucide-react";
+import AdBanner from "@/components/AdBanner";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -189,10 +190,7 @@ function TeamSlot({
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") commitEdit();
-    if (e.key === "Escape") {
-      setDraft(team?.name ?? "");
-      setEditing(false);
-    }
+    if (e.key === "Escape") { setDraft(team?.name ?? ""); setEditing(false); }
   };
 
   const isEmpty = !team;
@@ -200,36 +198,42 @@ function TeamSlot({
   return (
     <div
       className={[
-        "flex items-center gap-1.5 px-2 py-1 h-9 transition-all duration-200 group relative",
+        "flex items-center h-10 transition-all duration-200 group relative overflow-hidden",
         isEmpty
-          ? "border border-dashed border-blue-200/60 bg-blue-50/30"
+          ? "bg-slate-50"
           : isWinner
-          ? "bg-linear-to-r from-cyan-500/20 to-blue-500/15 border border-cyan-400/60 shadow-sm"
+          ? "bg-teal-50"
           : isLoser
-          ? "bg-white/30 border border-blue-100/50 opacity-45"
-          : "bg-white/70 border border-blue-200/60 hover:border-cyan-400/60 hover:bg-white/90",
+          ? "bg-white opacity-40"
+          : "bg-white hover:bg-sky-50/60",
       ].join(" ")}
     >
+      {/* Winner accent bar on left */}
+      {isWinner && (
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-teal-500 rounded-r-sm" />
+      )}
+
       {/* Win circle button */}
       {!isEmpty && (
         <button
           onClick={onSelectWinner}
           title={isWinner ? "Bỏ chọn" : "Chọn thắng"}
           className={[
-            "shrink-0 w-4 h-4 rounded-full border-2 transition-all duration-150 flex items-center justify-center",
+            "shrink-0 ml-2.5 w-4 h-4 rounded-full border-2 transition-all duration-150 flex items-center justify-center",
             isWinner
-              ? "bg-cyan-500 border-cyan-400 shadow-sm shadow-cyan-300"
-              : "border-blue-300 hover:border-cyan-500 hover:bg-cyan-50",
+              ? "bg-teal-500 border-teal-400"
+              : "border-slate-300 hover:border-teal-400 hover:bg-teal-50",
           ].join(" ")}
         >
           {isWinner && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3.5} />}
         </button>
       )}
+      {isEmpty && <div className="ml-2.5 w-4 h-4 shrink-0" />}
 
       {/* Team name */}
-      <div className="flex-1 min-w-0 flex items-center gap-1">
+      <div className="flex-1 min-w-0 flex items-center gap-1 px-2">
         {isEmpty ? (
-          <span className="text-xs text-blue-300/70 italic truncate">Chờ kết quả</span>
+          <span className="text-[11px] text-slate-400 italic truncate">Chờ kết quả</span>
         ) : editing ? (
           <input
             ref={inputRef}
@@ -237,52 +241,60 @@ function TeamSlot({
             onChange={(e) => setDraft(e.target.value)}
             onBlur={commitEdit}
             onKeyDown={handleKeyDown}
-            className="w-full bg-white text-blue-900 text-xs px-1.5 py-0.5 rounded-md outline-none border-2 border-cyan-400 focus:border-blue-500 font-medium"
+            className="w-full bg-white text-navy-900 text-xs px-1.5 py-0.5 rounded outline-none ring-2 ring-teal-400 font-semibold"
+            style={{ color: "#0c2340" }}
           />
         ) : (
           <span
-            className={[
-              "text-xs truncate cursor-pointer select-none font-semibold",
-              isWinner ? "text-cyan-700" : "text-blue-900",
-            ].join(" ")}
-            onDoubleClick={() => {
-              if (round === 0) { setDraft(team?.name ?? ""); setEditing(true); }
-            }}
+            className="text-xs truncate cursor-pointer select-none font-semibold"
+            style={{ color: isWinner ? "#0e7490" : "#0c2340" }}
+            onDoubleClick={() => { if (round === 0) { setDraft(team?.name ?? ""); setEditing(true); } }}
             title={round === 0 ? "Double-click để đổi tên" : team?.name}
           >
             {team?.name}
           </span>
         )}
-        {/* Winner plane icon */}
-        {isWinner && <Plane className="w-3 h-3 text-orange-500 shrink-0" />}
+        {isWinner && <Plane className="w-3 h-3 text-amber-500 shrink-0" />}
       </div>
 
       {/* Edit icon (round 0 only) */}
       {!isEmpty && round === 0 && !editing && (
         <button
           onClick={() => { setDraft(team?.name ?? ""); setEditing(true); }}
-          className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="shrink-0 mr-1 opacity-0 group-hover:opacity-100 transition-opacity"
         >
-          <Edit3 className="w-3 h-3 text-blue-400 hover:text-cyan-600" />
+          <Edit3 className="w-3 h-3 text-slate-400 hover:text-teal-600" />
         </button>
       )}
 
-      {/* Score input */}
-      {!isEmpty && (
-        <input
-          type="text"
-          value={score}
-          onChange={(e) => onScoreChange(e.target.value)}
-          placeholder="-"
-          maxLength={3}
-          className={[
-            "shrink-0 w-7 text-center text-xs rounded-md px-1 py-0.5 outline-none border-2 font-bold",
-            isWinner
-              ? "bg-cyan-50 border-cyan-300 text-cyan-700 focus:border-cyan-500"
-              : "bg-blue-50 border-blue-200 text-blue-800 focus:border-cyan-400",
-          ].join(" ")}
-        />
-      )}
+      {/* Score badge — styled like a scoreboard cell */}
+      <div
+        className={[
+          "shrink-0 mr-1.5 flex items-center justify-center rounded",
+          "w-9 h-7 font-black text-sm tabular-nums transition-colors duration-150",
+          isWinner
+            ? "bg-teal-600 text-white shadow-sm shadow-teal-300"
+            : isEmpty
+            ? "bg-slate-100 text-slate-300"
+            : "bg-slate-700 text-white",
+        ].join(" ")}
+      >
+        {!isEmpty ? (
+          <input
+            type="text"
+            value={score}
+            onChange={(e) => onScoreChange(e.target.value)}
+            placeholder="–"
+            maxLength={3}
+            className={[
+              "w-full h-full text-center text-sm font-black bg-transparent outline-none",
+              isWinner ? "text-white placeholder-teal-200" : "text-white placeholder-slate-400",
+            ].join(" ")}
+          />
+        ) : (
+          <span className="text-slate-400 text-xs">–</span>
+        )}
+      </div>
     </div>
   );
 }
@@ -307,37 +319,50 @@ function MatchCard({ match, onWinnerSelect, onScoreChange, onNameChange }: Match
 
   return (
     <div
-      className="flex flex-col w-48 rounded-xl overflow-hidden shadow-md
-        bg-white/80 backdrop-blur-sm border border-blue-200/70
-        hover:shadow-xl hover:scale-[1.02] hover:border-cyan-400/60
+      className="flex flex-col w-52 rounded-lg overflow-hidden
+        bg-white border border-slate-200
+        shadow-sm hover:shadow-md hover:scale-[1.02] hover:border-teal-400
         transition-all duration-200"
+      style={{ boxShadow: "0 1px 4px rgba(12,35,64,0.10), 0 0 0 1px rgba(226,232,240,0.8)" }}
     >
-      {/* Match number strip */}
-      <div className="h-0.5 bg-linear-to-r from-blue-500 via-cyan-400 to-orange-400" />
+      {/* Top accent bar: gradient per round */}
+      <div
+        className="h-1 shrink-0"
+        style={{
+          background: match.round === 4
+            ? "linear-gradient(90deg,#f59e0b,#ef4444)"
+            : match.round === 3
+            ? "linear-gradient(90deg,#8b5cf6,#0ea5e9)"
+            : match.round === 2
+            ? "linear-gradient(90deg,#0ea5e9,#06b6d4)"
+            : "linear-gradient(90deg,#1a56db,#0ea5e9)",
+        }}
+      />
 
-      <div className="flex flex-col gap-px p-1">
-        <TeamSlot
-          team={match.team1}
-          score={match.score1}
-          isWinner={winner1}
-          isLoser={!!match.winnerId && !winner1}
-          onSelectWinner={() => handleSelectWinner(match.team1?.id)}
-          onScoreChange={(v) => onScoreChange(match.id, "score1", v)}
-          onNameChange={(name) => match.team1 && onNameChange(match.team1.id, name)}
-          round={match.round}
-        />
-        <div className="h-px bg-blue-100/80 mx-2" />
-        <TeamSlot
-          team={match.team2}
-          score={match.score2}
-          isWinner={winner2}
-          isLoser={!!match.winnerId && !winner2}
-          onSelectWinner={() => handleSelectWinner(match.team2?.id)}
-          onScoreChange={(v) => onScoreChange(match.id, "score2", v)}
-          onNameChange={(name) => match.team2 && onNameChange(match.team2.id, name)}
-          round={match.round}
-        />
-      </div>
+      <TeamSlot
+        team={match.team1}
+        score={match.score1}
+        isWinner={winner1}
+        isLoser={!!match.winnerId && !winner1}
+        onSelectWinner={() => handleSelectWinner(match.team1?.id)}
+        onScoreChange={(v) => onScoreChange(match.id, "score1", v)}
+        onNameChange={(name) => match.team1 && onNameChange(match.team1.id, name)}
+        round={match.round}
+      />
+
+      {/* Divider */}
+      <div className="h-px bg-slate-100 mx-0" />
+
+      <TeamSlot
+        team={match.team2}
+        score={match.score2}
+        isWinner={winner2}
+        isLoser={!!match.winnerId && !winner2}
+        onSelectWinner={() => handleSelectWinner(match.team2?.id)}
+        onScoreChange={(v) => onScoreChange(match.id, "score2", v)}
+        onNameChange={(name) => match.team2 && onNameChange(match.team2.id, name)}
+        round={match.round}
+      />
     </div>
   );
 }
@@ -377,11 +402,9 @@ function Connectors({ containerRef }: ConnectorProps) {
         const toX = toRect.left - rect.left + scrollLeft;
         const toY = toRect.top + toRect.height / 2 - rect.top + scrollTop;
 
-        // Cubic Bezier — smooth flight-path curve
-        const cp1x = fromX + (toX - fromX) * 0.45;
-        const cp2x = fromX + (toX - fromX) * 0.55;
-
-        newPaths.push(`M ${fromX} ${fromY} C ${cp1x} ${fromY} ${cp2x} ${toY} ${toX} ${toY}`);
+        // Classic bracket elbow: horizontal → vertical → horizontal
+        const midX = fromX + (toX - fromX) * 0.5;
+        newPaths.push(`M ${fromX} ${fromY} H ${midX} V ${toY} H ${toX}`);
       }
     }
 
@@ -408,20 +431,15 @@ function Connectors({ containerRef }: ConnectorProps) {
       height={dims.h}
       style={{ zIndex: 0 }}
     >
-      <defs>
-        <linearGradient id="connectorGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.6" />
-          <stop offset="100%" stopColor="#818cf8" stopOpacity="0.4" />
-        </linearGradient>
-      </defs>
       {paths.map((d, i) => (
         <path
           key={i}
           d={d}
           fill="none"
-          stroke="url(#connectorGrad)"
-          strokeWidth="1.8"
-          strokeLinecap="round"
+          stroke="#94a3b8"
+          strokeWidth="1.5"
+          strokeLinecap="square"
+          strokeLinejoin="miter"
         />
       ))}
     </svg>
@@ -629,6 +647,11 @@ export default function BracketStage() {
         </div>
       </header>
 
+      {/* ── AD STRIP ────────────────────────────────────────────────────────── */}
+      <div className="relative z-10">
+        <AdBanner variant="strip" />
+      </div>
+
       {/* ── LEGEND BAR ──────────────────────────────────────────────────────── */}
       <div className="relative z-10 px-6 py-2 flex flex-wrap items-center gap-4 text-xs"
         style={{ background: "rgba(255,255,255,0.65)", backdropFilter: "blur(8px)", borderBottom: "1px solid rgba(147,197,253,0.4)" }}>
@@ -647,8 +670,10 @@ export default function BracketStage() {
       </div>
 
       {/* ── BRACKET AREA ────────────────────────────────────────────────────── */}
-      <main className="relative z-10 flex-1 overflow-x-auto pb-8 pt-4"
-        style={{ background: "transparent" }}>
+      <main
+        className="relative z-10 flex-1 overflow-x-auto pb-10 pt-5"
+        style={{ background: "transparent" }}
+      >
         <div ref={containerRef} className="relative inline-flex gap-0 px-6 min-w-max">
           <Connectors containerRef={containerRef} bracketData={bracketData} />
 
@@ -661,28 +686,40 @@ export default function BracketStage() {
             const slotHeight = 80 * Math.pow(2, r);
             const totalHeight = slotHeight * matchCount;
 
+            // Column accent colors per round
+            const colStyle: React.CSSProperties =
+              r === 4
+                ? { background: "rgba(245,158,11,0.06)", borderRadius: 12, border: "1px solid rgba(245,158,11,0.2)" }
+                : r === 3
+                ? { background: "rgba(139,92,246,0.05)", borderRadius: 10, border: "1px solid rgba(139,92,246,0.15)" }
+                : r === 2
+                ? { background: "rgba(14,165,233,0.05)", borderRadius: 10, border: "1px solid rgba(14,165,233,0.12)" }
+                : { background: "rgba(255,255,255,0.45)", borderRadius: 8, border: "1px solid rgba(203,213,225,0.5)" };
+
             return (
               <div key={r} className="flex flex-col relative" style={{ zIndex: 1 }}>
                 {/* Round label */}
-                <div className="text-center mb-3 px-4">
+                <div className="text-center mb-3 px-2">
                   <span
-                    className="text-xs font-bold uppercase tracking-widest whitespace-nowrap px-3 py-1 rounded-full"
-                    style={{
-                      background: r === 4
-                        ? "linear-gradient(135deg, #f97316, #fbbf24)"
-                        : "linear-gradient(135deg, rgba(29,78,216,0.12), rgba(8,145,178,0.12))",
-                      color: r === 4 ? "#fff" : "#1d4ed8",
-                      border: r === 4 ? "none" : "1px solid rgba(29,78,216,0.2)",
-                      boxShadow: r === 4 ? "0 2px 12px rgba(249,115,22,0.4)" : "none",
-                    }}
+                    className="inline-block text-[10px] font-black uppercase tracking-[0.12em] whitespace-nowrap px-3 py-1 rounded-md"
+                    style={
+                      r === 4
+                        ? { background: "linear-gradient(90deg,#f59e0b,#ef4444)", color: "#fff", boxShadow: "0 2px 8px rgba(245,158,11,0.35)" }
+                        : r === 3
+                        ? { background: "rgba(139,92,246,0.15)", color: "#7c3aed", border: "1px solid rgba(139,92,246,0.3)" }
+                        : r === 2
+                        ? { background: "rgba(14,165,233,0.12)", color: "#0369a1", border: "1px solid rgba(14,165,233,0.25)" }
+                        : { background: "rgba(26,86,219,0.1)", color: "#1e40af", border: "1px solid rgba(26,86,219,0.2)" }
+                    }
                   >
                     {ROUND_NAMES[r]}
                   </span>
                 </div>
 
+                {/* Column panel */}
                 <div
-                  className="flex flex-col justify-around"
-                  style={{ height: totalHeight > 0 ? `${totalHeight}px` : "auto" }}
+                  className="flex flex-col justify-around pb-3"
+                  style={{ height: totalHeight > 0 ? `${totalHeight}px` : "auto", ...colStyle }}
                 >
                   {matches.map((match) => (
                     <div
