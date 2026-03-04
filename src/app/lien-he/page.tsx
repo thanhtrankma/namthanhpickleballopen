@@ -14,10 +14,16 @@ interface FormState {
   email: string;
   phone: string;
   subject: string;
+  categories: string[]; // chỉ dùng khi subject === "dang-ky"
   message: string;
 }
 
-const INITIAL: FormState = { name: "", email: "", phone: "", subject: "", message: "" };
+const CONTEST_CATEGORIES = [
+  { id: "doi-nam",     label: "Đôi Nam",     emoji: "👨‍👨" },
+  { id: "doi-nam-nu",  label: "Đôi Nam Nữ",  emoji: "👫" },
+];
+
+const INITIAL: FormState = { name: "", email: "", phone: "", subject: "", categories: [], message: "" };
 
 function ContactCard({
   icon: Icon,
@@ -59,7 +65,8 @@ function ContactCard({
 
 export default function LienHePage() {
   const [form, setForm] = useState<FormState>(INITIAL);
-  const [sent, setSent] = useState(false);
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
   const [submissions, setSubmissions] = useState<(FormState & { time: string })[]>(() => {
     if (typeof window === "undefined") return [];
     try {
@@ -73,15 +80,57 @@ export default function LienHePage() {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleCategoryToggle = (id: string) => {
+    setForm((prev) => ({
+      ...prev,
+      categories: prev.categories.includes(id)
+        ? prev.categories.filter((c) => c !== id)
+        : [...prev.categories, id],
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const entry = { ...form, time: new Date().toLocaleString("vi-VN") };
+
+    if (form.subject === "dang-ky" && form.categories.length === 0) {
+      setErrorMsg("Vui lòng chọn ít nhất một nội dung thi đấu.");
+      setStatus("error");
+      return;
+    }
+
+    setStatus("loading");
+    setErrorMsg("");
+
+    const time = new Date().toLocaleString("vi-VN");
+    const entry = { ...form, time };
+
+    // Save to localStorage regardless of API result
     const updated = [entry, ...submissions].slice(0, 20);
     setSubmissions(updated);
     localStorage.setItem("contact_submissions", JSON.stringify(updated));
-    setSent(true);
+
+    // Send Telegram notification
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(entry),
+      });
+      const json = await res.json() as { ok?: boolean; error?: string };
+      if (!res.ok || !json.ok) {
+        setErrorMsg(json.error ?? "Gửi thất bại, vui lòng thử lại.");
+        setStatus("error");
+        return;
+      }
+    } catch {
+      setErrorMsg("Không thể kết nối máy chủ.");
+      setStatus("error");
+      return;
+    }
+
+    setStatus("success");
     setForm(INITIAL);
-    setTimeout(() => setSent(false), 4000);
+    setTimeout(() => setStatus("idle"), 5000);
   };
 
   const fieldCls = "w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 font-medium outline-none transition-all focus:border-sky-400 focus:ring-2 focus:ring-sky-100 placeholder:text-slate-300";
@@ -108,15 +157,32 @@ export default function LienHePage() {
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               {/* Success message */}
-              {sent && (
+              {status === "success" && (
                 <div
                   className="flex items-center gap-3 px-4 py-3 rounded-xl"
                   style={{ background: "#f0fdf4", border: "1.5px solid #86efac" }}
                 >
                   <CheckCircle className="w-5 h-5 text-green-500 shrink-0" />
-                  <span className="text-green-700 font-semibold text-sm">
-                    Đã gửi thành công! Ban tổ chức sẽ liên hệ lại sớm.
-                  </span>
+                  <div>
+                    <div className="text-green-700 font-bold text-sm">Đã gửi thành công! 🎉</div>
+                    <div className="text-green-600 text-xs mt-0.5">
+                      Thông tin đã được gửi đến ban tổ chức qua Telegram. Chúng tôi sẽ liên hệ lại sớm.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Error message */}
+              {status === "error" && (
+                <div
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl"
+                  style={{ background: "#fef2f2", border: "1.5px solid #fca5a5" }}
+                >
+                  <CheckCircle className="w-5 h-5 text-red-400 shrink-0" />
+                  <div>
+                    <div className="text-red-700 font-bold text-sm">Gửi thất bại</div>
+                    <div className="text-red-600 text-xs mt-0.5">{errorMsg}</div>
+                  </div>
                 </div>
               )}
 
@@ -171,7 +237,11 @@ export default function LienHePage() {
                 <select
                   name="subject"
                   value={form.subject}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    handleChange(e);
+                    // Reset categories khi đổi chủ đề
+                    setForm((prev) => ({ ...prev, subject: e.target.value, categories: [] }));
+                  }}
                   className={fieldCls}
                 >
                   <option value="">— Chọn chủ đề —</option>
@@ -182,6 +252,82 @@ export default function LienHePage() {
                   <option value="other">Khác</option>
                 </select>
               </div>
+
+              {/* Nội dung thi đấu — chỉ hiện khi chọn "Đăng ký đội" */}
+              {form.subject === "dang-ky" && (
+                <div
+                  className="rounded-xl p-4 space-y-3"
+                  style={{
+                    background: "linear-gradient(135deg,#eff6ff,#f0f9ff)",
+                    border: "1.5px solid #bfdbfe",
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-black text-blue-700 uppercase tracking-wider">
+                      🏸 Nội dung thi đấu *
+                    </span>
+                    <span className="text-[10px] text-blue-400 font-medium">(có thể chọn cả hai)</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    {CONTEST_CATEGORIES.map(({ id, label, emoji }) => {
+                      const checked = form.categories.includes(id);
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => handleCategoryToggle(id)}
+                          className="flex items-center gap-3 p-3.5 rounded-xl border-2 text-left transition-all duration-150 hover:scale-[1.02]"
+                          style={{
+                            background: checked
+                              ? "linear-gradient(135deg,rgba(14,165,233,0.12),rgba(26,86,219,0.08))"
+                              : "#fff",
+                            borderColor: checked ? "#0ea5e9" : "#e2e8f0",
+                            boxShadow: checked ? "0 0 0 3px rgba(14,165,233,0.12)" : "none",
+                          }}
+                        >
+                          {/* Custom checkbox */}
+                          <div
+                            className="w-5 h-5 rounded flex items-center justify-center shrink-0 transition-all"
+                            style={{
+                              background: checked
+                                ? "linear-gradient(135deg,#1a56db,#0ea5e9)"
+                                : "#f1f5f9",
+                              border: checked ? "none" : "1.5px solid #cbd5e1",
+                            }}
+                          >
+                            {checked && (
+                              <svg viewBox="0 0 12 10" className="w-3 h-3" fill="none">
+                                <path d="M1 5l3.5 3.5L11 1" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            )}
+                          </div>
+
+                          <div>
+                            <div className="text-lg leading-none mb-0.5">{emoji}</div>
+                            <div
+                              className="text-sm font-black leading-tight"
+                              style={{ color: checked ? "#1d4ed8" : "#334155" }}
+                            >
+                              {label}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {form.categories.length === 2 && (
+                    <div
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold"
+                      style={{ background: "rgba(16,185,129,0.1)", color: "#065f46" }}
+                    >
+                      <span>✅</span>
+                      Đã chọn cả hai nội dung — Đôi Nam &amp; Đôi Nam Nữ
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label className="text-xs font-bold text-slate-500 mb-1 block">
@@ -200,11 +346,24 @@ export default function LienHePage() {
 
               <button
                 type="submit"
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black text-white transition-all hover:opacity-90 hover:shadow-lg"
+                disabled={status === "loading"}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black text-white transition-all hover:opacity-90 hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
                 style={{ background: "linear-gradient(90deg,#1a56db,#0ea5e9)" }}
               >
-                <Send className="w-4 h-4" />
-                Gửi tin nhắn
+                {status === "loading" ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                    </svg>
+                    Đang gửi...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Gửi tin nhắn
+                  </>
+                )}
               </button>
             </form>
           </div>
