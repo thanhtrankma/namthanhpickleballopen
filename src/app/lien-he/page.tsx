@@ -138,7 +138,7 @@ export default function LienHePage() {
   return (
     <PageLayout
       title="Liên hệ & Đăng ký"
-      subtitle="Hotline: 1900 xxxx · namthanhtravel.com.vn"
+      subtitle="Hotline: 0365614597 · namthanhtravel.com.vn"
     >
       <div className="grid md:grid-cols-3 gap-6 mb-8">
         {/* Contact form */}
@@ -418,9 +418,9 @@ export default function LienHePage() {
               <p className="text-sky-300/80 text-xs">Ban tổ chức · Giải đấu 2025</p>
             </div>
             <div className="p-4 space-y-3">
-              <ContactCard icon={Phone}   label="Hotline"   value="1900 xxxx" href="tel:1900xxxx"   color="#ef4444" />
-              <ContactCard icon={Mail}    label="Email"     value="info@namthanhtravel.com.vn" href="mailto:info@namthanhtravel.com.vn" color="#1a56db" />
-              <ContactCard icon={MapPin}  label="Địa chỉ"  value="123 Phố Huế, Hai Bà Trưng, Hà Nội"   color="#10b981" />
+              <ContactCard icon={Phone}   label="Hotline"   value="0365614597" href="tel:0365614597"   color="#ef4444" />
+              <ContactCard icon={Mail}    label="Email"     value="namthanhtravel@gmail.com" href="mailto:namthanhtravel@gmail.com" color="#1a56db" />
+              <ContactCard icon={MapPin}  label="Địa chỉ"  value="51 Đào Duy Từ, Hoàn Kiếm, Hà Nội"   color="#10b981" />
               <ContactCard icon={Globe}   label="Website"   value="namthanhtravel.com.vn" href="https://namthanhtravel.com.vn" color="#8b5cf6" />
               <ContactCard icon={Clock}   label="Giờ làm việc" value="Thứ 2 – Thứ 7: 8:00 – 18:00" color="#f59e0b" />
             </div>
@@ -466,7 +466,7 @@ export default function LienHePage() {
       >
         <div className="text-center z-10 relative">
           <MapPin className="w-10 h-10 mx-auto mb-2 text-blue-400 opacity-50" />
-          <div className="font-bold text-blue-600 text-sm">123 Phố Huế, Hai Bà Trưng, Hà Nội</div>
+          <div className="font-bold text-blue-600 text-sm">51 Đào Duy Từ, Hoàn Kiếm, Hà Nội</div>
           <div className="text-blue-400 text-xs mt-1">Google Maps · Chỉ đường</div>
         </div>
         {/* Decorative elements */}
