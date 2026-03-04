@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Trophy, RotateCcw, Edit3, Check, Plane,
-  Phone, Globe, Facebook, MapPin,
+  Phone, Globe, Facebook, Star, ChevronUp,
 } from "lucide-react";
 import AdBanner from "@/components/AdBanner";
 
@@ -14,452 +14,501 @@ interface Team {
   name: string;
 }
 
-interface Match {
+interface GroupMatch {
   id: string;
-  round: number;
-  matchIndex: number;
-  team1: Team | null;
-  team2: Team | null;
+  team1Idx: number;
+  team2Idx: number;
   score1: string;
   score2: string;
-  winnerId: string | null;
 }
 
-type BracketData = Match[];
+interface Group {
+  id: string;
+  letter: string;
+  teams: Team[];
+  matches: GroupMatch[];
+}
+
+type TournamentData = Group[];
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const ROUND_NAMES = ["Vòng 32", "Vòng 16", "Tứ Kết", "Bán Kết", "Chung Kết"];
-const MATCH_COUNTS = [16, 8, 4, 2, 1];
-const TOTAL_ROUNDS = 5;
-const STORAGE_KEY = "tournament_bracket_v1";
+const STORAGE_KEY = "tournament_group_v1";
+const GROUP_LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H"];
+// All C(4,2) = 6 pairs for round-robin
+const RR_PAIRS: [number, number][] = [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Initial data ─────────────────────────────────────────────────────────────
 
-function generateDefaultTeams(): Team[] {
-  return Array.from({ length: 32 }, (_, i) => ({
-    id: `team-${i + 1}`,
-    name: `Đội ${i + 1}`,
-  }));
-}
-
-function buildInitialBracket(teams: Team[]): BracketData {
-  const matches: Match[] = [];
-  for (let i = 0; i < 16; i++) {
-    matches.push({
-      id: `r0-m${i}`,
-      round: 0,
-      matchIndex: i,
-      team1: teams[i * 2] ?? null,
-      team2: teams[i * 2 + 1] ?? null,
+function generateInitialData(): TournamentData {
+  let n = 1;
+  return GROUP_LETTERS.map((letter, g) => ({
+    id: `g${g}`,
+    letter,
+    teams: Array.from({ length: 4 }, (_, t) => ({
+      id: `t${n + t}`,
+      name: `Đội ${n + t}`,
+    })),
+    matches: RR_PAIRS.map(([i, j], m) => ({
+      id: `g${g}-m${m}`,
+      team1Idx: i,
+      team2Idx: j,
       score1: "",
       score2: "",
-      winnerId: null,
-    });
+    })),
+  })).map((g) => { n += 4; return g; })
+    // n increment happens after spread — fix with explicit counter below
+    .reduce<{ list: TournamentData; n: number }>(
+      (acc, _g, idx) => {
+        const start = idx * 4 + 1;
+        const g: Group = {
+          id: `g${idx}`,
+          letter: GROUP_LETTERS[idx],
+          teams: Array.from({ length: 4 }, (_, t) => ({
+            id: `t${start + t}`,
+            name: `Đội ${start + t}`,
+          })),
+          matches: RR_PAIRS.map(([i, j], m) => ({
+            id: `g${idx}-m${m}`,
+            team1Idx: i,
+            team2Idx: j,
+            score1: "",
+            score2: "",
+          })),
+        };
+        acc.list.push(g);
+        return acc;
+      },
+      { list: [], n: 1 }
+    ).list
+}
+
+// ─── Standings calculation ────────────────────────────────────────────────────
+
+interface Standing {
+  team: Team;
+  teamIdx: number;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  gf: number;
+  ga: number;
+  gd: number;
+  pts: number;
+}
+
+function calcStandings(group: Group): Standing[] {
+  const rows: Standing[] = group.teams.map((team, idx) => ({
+    team, teamIdx: idx,
+    played: 0, won: 0, drawn: 0, lost: 0,
+    gf: 0, ga: 0, gd: 0, pts: 0,
+  }));
+
+  for (const m of group.matches) {
+    if (m.score1 === "" || m.score2 === "") continue;
+    const s1 = parseInt(m.score1);
+    const s2 = parseInt(m.score2);
+    if (isNaN(s1) || isNaN(s2)) continue;
+
+    const r1 = rows[m.team1Idx];
+    const r2 = rows[m.team2Idx];
+    r1.played++; r2.played++;
+    r1.gf += s1; r1.ga += s2;
+    r2.gf += s2; r2.ga += s1;
+
+    if (s1 > s2)      { r1.won++; r1.pts += 3; r2.lost++; }
+    else if (s2 > s1) { r2.won++; r2.pts += 3; r1.lost++; }
+    else              { r1.drawn++; r1.pts++;   r2.drawn++; r2.pts++; }
   }
-  for (let r = 1; r < TOTAL_ROUNDS; r++) {
-    for (let m = 0; m < MATCH_COUNTS[r]; m++) {
-      matches.push({
-        id: `r${r}-m${m}`,
-        round: r,
-        matchIndex: m,
-        team1: null,
-        team2: null,
-        score1: "",
-        score2: "",
-        winnerId: null,
-      });
-    }
-  }
-  return matches;
+
+  rows.forEach((r) => (r.gd = r.gf - r.ga));
+  rows.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf || a.teamIdx - b.teamIdx);
+  return rows;
 }
 
-function getMatch(data: BracketData, round: number, matchIndex: number): Match | undefined {
-  return data.find((m) => m.round === round && m.matchIndex === matchIndex);
+function groupCompleted(group: Group): boolean {
+  return group.matches.every((m) => m.score1 !== "" && m.score2 !== "");
 }
 
-function propagateWinner(data: BracketData, round: number, matchIndex: number, winner: Team): BracketData {
-  if (round >= TOTAL_ROUNDS - 1) return data;
-  const nextRound = round + 1;
-  const nextMatchIndex = Math.floor(matchIndex / 2);
-  const slot = matchIndex % 2 === 0 ? "team1" : "team2";
-  return data.map((m) => {
-    if (m.round === nextRound && m.matchIndex === nextMatchIndex) {
-      return { ...m, [slot]: winner, winnerId: null, score1: "", score2: "" };
-    }
-    return m;
-  });
-}
-
-function clearDescendants(data: BracketData, round: number, matchIndex: number): BracketData {
-  let result = data;
-  let curRound = round;
-  let curIndex = matchIndex;
-  while (curRound < TOTAL_ROUNDS - 1) {
-    const nextRound = curRound + 1;
-    const nextMatchIndex = Math.floor(curIndex / 2);
-    const slot = curIndex % 2 === 0 ? "team1" : "team2";
-    result = result.map((m) => {
-      if (m.round === nextRound && m.matchIndex === nextMatchIndex) {
-        return { ...m, [slot]: null, winnerId: null, score1: "", score2: "" };
-      }
-      return m;
-    });
-    curRound = nextRound;
-    curIndex = nextMatchIndex;
-  }
-  return result;
-}
-
-// ─── World Map SVG Background Pattern ─────────────────────────────────────────
+// ─── World Map Background ────────────────────────────────────────────────────
 
 function WorldMapPattern() {
   return (
     <svg
       className="fixed inset-0 w-full h-full pointer-events-none select-none"
-      style={{ zIndex: 0, opacity: 0.045 }}
+      style={{ zIndex: 0, opacity: 0.04 }}
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 1200 600"
       preserveAspectRatio="xMidYMid slice"
     >
-      {/* Simplified world continent silhouettes */}
-      {/* North America */}
       <path d="M 80 80 Q 120 60 180 75 L 220 90 Q 260 85 280 110 L 295 140 Q 290 175 270 190 L 240 200 Q 200 210 175 195 L 155 180 Q 120 170 100 150 Q 70 130 75 105 Z" fill="#0f2a50"/>
-      {/* South America */}
       <path d="M 195 230 Q 230 215 255 225 L 270 245 Q 280 280 275 320 L 260 355 Q 240 375 215 370 L 195 350 Q 175 320 180 285 Q 182 255 195 230 Z" fill="#0f2a50"/>
-      {/* Europe */}
       <path d="M 460 60 Q 510 50 545 65 L 565 85 Q 580 100 570 120 L 545 135 Q 520 145 495 138 L 470 125 Q 450 105 455 80 Z" fill="#0f2a50"/>
-      {/* Africa */}
       <path d="M 470 165 Q 510 150 545 162 L 560 185 Q 575 220 572 265 L 558 300 Q 540 325 515 328 L 490 320 Q 465 300 460 265 Q 455 225 462 190 Z" fill="#0f2a50"/>
-      {/* Asia */}
       <path d="M 580 50 Q 650 35 730 50 L 800 65 Q 860 75 890 100 L 905 130 Q 910 160 890 180 L 850 195 Q 800 205 750 198 L 690 188 Q 640 175 605 155 L 575 130 Q 558 100 568 72 Z" fill="#0f2a50"/>
-      {/* Australia */}
       <path d="M 830 300 Q 880 285 930 295 L 960 315 Q 975 340 968 370 L 945 390 Q 915 400 880 393 L 850 378 Q 825 358 825 330 Z" fill="#0f2a50"/>
-      {/* Flight path dots */}
-      {[
-        [230, 145, 520, 100], [520, 100, 720, 130], [720, 130, 900, 350],
-        [230, 230, 490, 240], [490, 240, 720, 130],
-      ].map(([x1, y1, x2, y2], i) => (
+      {[[230,145,520,100],[520,100,720,130],[720,130,900,350]].map(([x1,y1,x2,y2],i) => (
         <g key={i}>
-          <path
-            d={`M ${x1} ${y1} Q ${(x1 + x2) / 2} ${Math.min(y1, y2) - 40} ${x2} ${y2}`}
-            fill="none"
-            stroke="#1d4ed8"
-            strokeWidth="1"
-            strokeDasharray="6 5"
-            opacity="0.6"
-          />
-          <circle cx={x1} cy={y1} r="3" fill="#f97316" opacity="0.7" />
-          <circle cx={x2} cy={y2} r="3" fill="#f97316" opacity="0.7" />
+          <path d={`M ${x1} ${y1} Q ${(x1+x2)/2} ${Math.min(y1,y2)-40} ${x2} ${y2}`}
+            fill="none" stroke="#1d4ed8" strokeWidth="1" strokeDasharray="6 5" opacity="0.5"/>
+          <circle cx={x1} cy={y1} r="3" fill="#f97316" opacity="0.6"/>
+          <circle cx={x2} cy={y2} r="3" fill="#f97316" opacity="0.6"/>
         </g>
       ))}
     </svg>
   );
 }
 
-// ─── TeamSlot ──────────────────────────────────────────────────────────────────
+// ─── Editable Team Name ───────────────────────────────────────────────────────
 
-interface TeamSlotProps {
-  team: Team | null;
-  score: string;
-  isWinner: boolean;
-  isLoser: boolean;
-  onSelectWinner: () => void;
-  onScoreChange: (val: string) => void;
-  onNameChange: (name: string) => void;
-  round: number;
-}
-
-function TeamSlot({
-  team, score, isWinner, isLoser,
-  onSelectWinner, onScoreChange, onNameChange, round,
-}: TeamSlotProps) {
+function EditableName({
+  name,
+  onCommit,
+  className = "",
+}: {
+  name: string;
+  onCommit: (v: string) => void;
+  className?: string;
+}) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(team?.name ?? "");
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [draft, setDraft] = useState(name);
+  const ref = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (editing) inputRef.current?.focus();
-  }, [editing]);
+  useEffect(() => { if (editing) ref.current?.focus(); }, [editing]);
 
-  const commitEdit = () => {
-    const trimmed = draft.trim();
-    if (trimmed) onNameChange(trimmed);
+  const commit = () => {
+    const v = draft.trim();
+    if (v) onCommit(v);
+    else setDraft(name);
     setEditing(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") commitEdit();
-    if (e.key === "Escape") { setDraft(team?.name ?? ""); setEditing(false); }
-  };
-
-  const isEmpty = !team;
+  if (editing) {
+    return (
+      <input
+        ref={ref}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") { setDraft(name); setEditing(false); } }}
+        className="bg-white border-2 border-teal-400 rounded px-1 py-0 text-xs font-semibold outline-none text-slate-800 w-full"
+      />
+    );
+  }
 
   return (
-    <div
-      className={[
-        "flex items-center h-10 transition-all duration-200 group relative overflow-hidden",
-        isEmpty
-          ? "bg-slate-50"
-          : isWinner
-          ? "bg-teal-50"
-          : isLoser
-          ? "bg-white opacity-40"
-          : "bg-white hover:bg-sky-50/60",
-      ].join(" ")}
+    <span
+      className={`group/name flex items-center gap-1 cursor-pointer ${className}`}
+      onDoubleClick={() => { setDraft(name); setEditing(true); }}
+      title="Double-click để đổi tên"
     >
-      {/* Winner accent bar on left */}
-      {isWinner && (
-        <div className="absolute left-0 top-0 bottom-0 w-1 bg-teal-500 rounded-r-sm" />
-      )}
+      <span className="truncate">{name}</span>
+      <Edit3 className="w-2.5 h-2.5 text-slate-300 opacity-0 group-hover/name:opacity-100 shrink-0 transition-opacity" />
+    </span>
+  );
+}
 
-      {/* Win circle button */}
-      {!isEmpty && (
-        <button
-          onClick={onSelectWinner}
-          title={isWinner ? "Bỏ chọn" : "Chọn thắng"}
-          className={[
-            "shrink-0 ml-2.5 w-4 h-4 rounded-full border-2 transition-all duration-150 flex items-center justify-center",
-            isWinner
-              ? "bg-teal-500 border-teal-400"
-              : "border-slate-300 hover:border-teal-400 hover:bg-teal-50",
-          ].join(" ")}
-        >
-          {isWinner && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3.5} />}
-        </button>
-      )}
-      {isEmpty && <div className="ml-2.5 w-4 h-4 shrink-0" />}
+// ─── Score Cell ───────────────────────────────────────────────────────────────
 
-      {/* Team name */}
-      <div className="flex-1 min-w-0 flex items-center gap-1 px-2">
-        {isEmpty ? (
-          <span className="text-[11px] text-slate-400 italic truncate">Chờ kết quả</span>
-        ) : editing ? (
-          <input
-            ref={inputRef}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={commitEdit}
-            onKeyDown={handleKeyDown}
-            className="w-full bg-white text-navy-900 text-xs px-1.5 py-0.5 rounded outline-none ring-2 ring-teal-400 font-semibold"
-            style={{ color: "#0c2340" }}
-          />
-        ) : (
-          <span
-            className="text-xs truncate cursor-pointer select-none font-semibold"
-            style={{ color: isWinner ? "#0e7490" : "#0c2340" }}
-            onDoubleClick={() => { if (round === 0) { setDraft(team?.name ?? ""); setEditing(true); } }}
-            title={round === 0 ? "Double-click để đổi tên" : team?.name}
-          >
-            {team?.name}
-          </span>
-        )}
-        {isWinner && <Plane className="w-3 h-3 text-amber-500 shrink-0" />}
-      </div>
-
-      {/* Edit icon (round 0 only) */}
-      {!isEmpty && round === 0 && !editing && (
-        <button
-          onClick={() => { setDraft(team?.name ?? ""); setEditing(true); }}
-          className="shrink-0 mr-1 opacity-0 group-hover:opacity-100 transition-opacity"
-        >
-          <Edit3 className="w-3 h-3 text-slate-400 hover:text-teal-600" />
-        </button>
-      )}
-
-      {/* Score badge — styled like a scoreboard cell */}
-      <div
-        className={[
-          "shrink-0 mr-1.5 flex items-center justify-center rounded",
-          "w-9 h-7 font-black text-sm tabular-nums transition-colors duration-150",
-          isWinner
-            ? "bg-teal-600 text-white shadow-sm shadow-teal-300"
-            : isEmpty
-            ? "bg-slate-100 text-slate-300"
-            : "bg-slate-700 text-white",
-        ].join(" ")}
-      >
-        {!isEmpty ? (
-          <input
-            type="text"
-            value={score}
-            onChange={(e) => onScoreChange(e.target.value)}
-            placeholder="–"
-            maxLength={3}
-            className={[
-              "w-full h-full text-center text-sm font-black bg-transparent outline-none",
-              isWinner ? "text-white placeholder-teal-200" : "text-white placeholder-slate-400",
-            ].join(" ")}
-          />
-        ) : (
-          <span className="text-slate-400 text-xs">–</span>
-        )}
-      </div>
+function ScoreCell({
+  value,
+  onChange,
+  highlight,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  highlight: boolean;
+}) {
+  return (
+    <div
+      className="w-8 h-7 rounded flex items-center justify-center shrink-0"
+      style={{
+        background: highlight ? "#0e7490" : "#1e293b",
+        border: highlight ? "1.5px solid #0ea5e9" : "1px solid #334155",
+        boxShadow: highlight ? "0 0 6px rgba(14,165,233,0.3)" : "none",
+      }}
+    >
+      <input
+        type="text"
+        inputMode="numeric"
+        value={value}
+        onChange={(e) => onChange(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))}
+        placeholder="–"
+        className="w-full h-full text-center text-xs font-black bg-transparent outline-none"
+        style={{ color: highlight ? "#e0f2fe" : "#94a3b8" }}
+      />
     </div>
   );
 }
 
-// ─── Match Card ───────────────────────────────────────────────────────────────
+// ─── Match Row ────────────────────────────────────────────────────────────────
 
-interface MatchCardProps {
-  match: Match;
-  onWinnerSelect: (matchId: string, teamId: string) => void;
-  onScoreChange: (matchId: string, slot: "score1" | "score2", value: string) => void;
-  onNameChange: (teamId: string, name: string) => void;
-}
-
-function MatchCard({ match, onWinnerSelect, onScoreChange, onNameChange }: MatchCardProps) {
-  const winner1 = match.winnerId === match.team1?.id;
-  const winner2 = match.winnerId === match.team2?.id;
-
-  const handleSelectWinner = (teamId: string | undefined) => {
-    if (!teamId) return;
-    onWinnerSelect(match.id, match.winnerId === teamId ? "" : teamId);
-  };
+function MatchRow({
+  match,
+  group,
+  onScoreChange,
+}: {
+  match: GroupMatch;
+  group: Group;
+  onScoreChange: (matchId: string, slot: "score1" | "score2", v: string) => void;
+}) {
+  const t1 = group.teams[match.team1Idx];
+  const t2 = group.teams[match.team2Idx];
+  const s1 = parseInt(match.score1);
+  const s2 = parseInt(match.score2);
+  const played = match.score1 !== "" && match.score2 !== "" && !isNaN(s1) && !isNaN(s2);
+  const w1 = played && s1 > s2;
+  const w2 = played && s2 > s1;
 
   return (
     <div
-      className="flex flex-col w-52 rounded-lg overflow-hidden
-        bg-white border border-slate-200
-        shadow-sm hover:shadow-md hover:scale-[1.02] hover:border-teal-400
-        transition-all duration-200"
-      style={{ boxShadow: "0 1px 4px rgba(12,35,64,0.10), 0 0 0 1px rgba(226,232,240,0.8)" }}
+      className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors"
+      style={{
+        background: played ? "rgba(14,165,233,0.06)" : "rgba(255,255,255,0.03)",
+        border: played ? "1px solid rgba(14,165,233,0.15)" : "1px solid transparent",
+      }}
     >
-      {/* Top accent bar: gradient per round */}
-      <div
-        className="h-1 shrink-0"
+      {/* Team 1 */}
+      <span
+        className="flex-1 text-right text-xs truncate"
         style={{
-          background: match.round === 4
-            ? "linear-gradient(90deg,#f59e0b,#ef4444)"
-            : match.round === 3
-            ? "linear-gradient(90deg,#8b5cf6,#0ea5e9)"
-            : match.round === 2
-            ? "linear-gradient(90deg,#0ea5e9,#06b6d4)"
-            : "linear-gradient(90deg,#1a56db,#0ea5e9)",
+          fontWeight: w1 ? 700 : 500,
+          color: w1 ? "#38bdf8" : "#94a3b8",
         }}
-      />
+        title={t1.name}
+      >
+        {t1.name}
+      </span>
 
-      <TeamSlot
-        team={match.team1}
-        score={match.score1}
-        isWinner={winner1}
-        isLoser={!!match.winnerId && !winner1}
-        onSelectWinner={() => handleSelectWinner(match.team1?.id)}
-        onScoreChange={(v) => onScoreChange(match.id, "score1", v)}
-        onNameChange={(name) => match.team1 && onNameChange(match.team1.id, name)}
-        round={match.round}
-      />
+      {/* Score */}
+      <div className="flex items-center gap-1 shrink-0">
+        <ScoreCell value={match.score1} onChange={(v) => onScoreChange(match.id, "score1", v)} highlight={w1} />
+        <span className="text-slate-600 text-xs font-bold">–</span>
+        <ScoreCell value={match.score2} onChange={(v) => onScoreChange(match.id, "score2", v)} highlight={w2} />
+      </div>
 
-      {/* Divider */}
-      <div className="h-px bg-slate-100 mx-0" />
-
-      <TeamSlot
-        team={match.team2}
-        score={match.score2}
-        isWinner={winner2}
-        isLoser={!!match.winnerId && !winner2}
-        onSelectWinner={() => handleSelectWinner(match.team2?.id)}
-        onScoreChange={(v) => onScoreChange(match.id, "score2", v)}
-        onNameChange={(name) => match.team2 && onNameChange(match.team2.id, name)}
-        round={match.round}
-      />
+      {/* Team 2 */}
+      <span
+        className="flex-1 text-left text-xs truncate"
+        style={{
+          fontWeight: w2 ? 700 : 500,
+          color: w2 ? "#38bdf8" : "#94a3b8",
+        }}
+        title={t2.name}
+      >
+        {t2.name}
+      </span>
     </div>
   );
 }
 
-// ─── SVG Connectors (Cubic Bezier) ────────────────────────────────────────────
+// ─── Standings Table ──────────────────────────────────────────────────────────
 
-interface ConnectorProps {
-  containerRef: React.RefObject<HTMLDivElement | null>;
-  bracketData: BracketData;
-}
-
-function Connectors({ containerRef }: ConnectorProps) {
-  const [paths, setPaths] = useState<string[]>([]);
-  const [dims, setDims] = useState({ w: 0, h: 0 });
-
-  const computePaths = useCallback(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const rect = container.getBoundingClientRect();
-    const scrollLeft = container.scrollLeft;
-    const scrollTop = container.scrollTop;
-    const newPaths: string[] = [];
-
-    for (let r = 0; r < TOTAL_ROUNDS - 1; r++) {
-      for (let m = 0; m < MATCH_COUNTS[r]; m++) {
-        const fromEl = container.querySelector(`[data-match="r${r}-m${m}"]`) as HTMLElement;
-        const toM = Math.floor(m / 2);
-        const toEl = container.querySelector(`[data-match="r${r + 1}-m${toM}"]`) as HTMLElement;
-        if (!fromEl || !toEl) continue;
-
-        const fromRect = fromEl.getBoundingClientRect();
-        const toRect = toEl.getBoundingClientRect();
-
-        const fromX = fromRect.right - rect.left + scrollLeft;
-        const fromY = fromRect.top + fromRect.height / 2 - rect.top + scrollTop;
-        const toX = toRect.left - rect.left + scrollLeft;
-        const toY = toRect.top + toRect.height / 2 - rect.top + scrollTop;
-
-        // Classic bracket elbow: horizontal → vertical → horizontal
-        const midX = fromX + (toX - fromX) * 0.5;
-        newPaths.push(`M ${fromX} ${fromY} H ${midX} V ${toY} H ${toX}`);
-      }
-    }
-
-    setPaths(newPaths);
-    setDims({ w: container.scrollWidth, h: container.scrollHeight });
-  }, [containerRef]);
-
-  useEffect(() => {
-    const timer = setTimeout(computePaths, 50);
-    return () => clearTimeout(timer);
-  }, [computePaths]);
-
-  useEffect(() => {
-    window.addEventListener("resize", computePaths);
-    return () => window.removeEventListener("resize", computePaths);
-  }, [computePaths]);
-
-  if (!dims.w || !dims.h) return null;
+function StandingsTable({
+  group,
+  onNameChange,
+}: {
+  group: Group;
+  onNameChange: (groupId: string, teamIdx: number, name: string) => void;
+}) {
+  const rows = calcStandings(group);
+  const completed = groupCompleted(group);
+  const allPlayed6 = group.matches.filter((m) => m.score1 !== "" && m.score2 !== "").length;
 
   return (
-    <svg
-      className="absolute inset-0 pointer-events-none"
-      width={dims.w}
-      height={dims.h}
-      style={{ zIndex: 0 }}
+    <div className="overflow-hidden rounded-lg border border-slate-700/50">
+      {/* Header */}
+      <div
+        className="grid text-[10px] font-black uppercase tracking-wider px-2 py-1.5"
+        style={{
+          gridTemplateColumns: "1.2rem 1fr 2rem 2rem 2rem 2rem 2rem",
+          background: "#0f172a",
+          color: "#475569",
+        }}
+      >
+        <span>#</span>
+        <span>Đội</span>
+        <span className="text-center">Đ</span>
+        <span className="text-center">T</span>
+        <span className="text-center">H</span>
+        <span className="text-center">B</span>
+        <span className="text-center font-black" style={{ color: "#38bdf8" }}>Đ</span>
+      </div>
+
+      {/* Rows */}
+      {rows.map((row, rank) => {
+        const isTop2 = rank < 2;
+        const qualified = completed && isTop2;
+        return (
+          <div
+            key={row.team.id}
+            className="grid items-center px-2 py-1.5 text-xs border-t border-slate-800"
+            style={{
+              gridTemplateColumns: "1.2rem 1fr 2rem 2rem 2rem 2rem 2rem",
+              background: qualified
+                ? "rgba(16,185,129,0.08)"
+                : isTop2 && allPlayed6 > 0
+                ? "rgba(14,165,233,0.05)"
+                : "transparent",
+            }}
+          >
+            {/* Rank */}
+            <span className="text-slate-500 font-mono text-[10px]">{rank + 1}</span>
+
+            {/* Name — editable */}
+            <div className="flex items-center gap-1 min-w-0">
+              {qualified && (
+                <ChevronUp className="w-3 h-3 text-emerald-400 shrink-0" />
+              )}
+              <EditableName
+                name={row.team.name}
+                onCommit={(v) => onNameChange(group.id, row.teamIdx, v)}
+                className={`text-xs font-semibold ${qualified ? "text-emerald-300" : isTop2 ? "text-sky-200" : "text-slate-400"}`}
+              />
+            </div>
+
+            {/* Stats */}
+            <span className="text-center text-slate-500">{row.played}</span>
+            <span className="text-center text-emerald-400">{row.won}</span>
+            <span className="text-center text-slate-500">{row.drawn}</span>
+            <span className="text-center text-red-400">{row.lost}</span>
+            <span
+              className="text-center font-black"
+              style={{ color: "#38bdf8" }}
+            >
+              {row.pts}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Group Card ───────────────────────────────────────────────────────────────
+
+const GROUP_COLORS = [
+  "#3b82f6", "#06b6d4", "#8b5cf6", "#ec4899",
+  "#f59e0b", "#10b981", "#ef4444", "#6366f1",
+];
+
+function GroupCard({
+  group,
+  onScoreChange,
+  onNameChange,
+}: {
+  group: Group;
+  onScoreChange: (groupId: string, matchId: string, slot: "score1" | "score2", v: string) => void;
+  onNameChange: (groupId: string, teamIdx: number, name: string) => void;
+}) {
+  const [showMatches, setShowMatches] = useState(true);
+  const gIdx = GROUP_LETTERS.indexOf(group.letter);
+  const color = GROUP_COLORS[gIdx] ?? "#3b82f6";
+  const played = group.matches.filter((m) => m.score1 !== "" && m.score2 !== "").length;
+  const completed = played === 6;
+
+  return (
+    <div
+      className="flex flex-col rounded-xl overflow-hidden"
+      style={{
+        background: "#0f172a",
+        border: `1px solid ${color}35`,
+        boxShadow: `0 4px 24px rgba(0,0,0,0.3), 0 0 0 1px ${color}15`,
+      }}
     >
-      {paths.map((d, i) => (
-        <path
-          key={i}
-          d={d}
-          fill="none"
-          stroke="#94a3b8"
-          strokeWidth="1.5"
-          strokeLinecap="square"
-          strokeLinejoin="miter"
-        />
-      ))}
-    </svg>
+      {/* ── Card header ── */}
+      <div
+        className="px-4 py-3 flex items-center justify-between"
+        style={{
+          background: `linear-gradient(90deg, ${color}22 0%, transparent 100%)`,
+          borderBottom: `1px solid ${color}30`,
+        }}
+      >
+        <div className="flex items-center gap-2.5">
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm text-white shadow-lg"
+            style={{ background: `linear-gradient(135deg,${color},${color}99)`, boxShadow: `0 2px 8px ${color}40` }}
+          >
+            {group.letter}
+          </div>
+          <div>
+            <div className="font-black text-white text-sm">Bảng {group.letter}</div>
+            <div className="text-[10px]" style={{ color: `${color}99` }}>
+              {played}/6 trận · {completed ? "✓ Hoàn tất" : `còn ${6 - played}`}
+            </div>
+          </div>
+        </div>
+
+        {completed && (
+          <div
+            className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold"
+            style={{ background: "rgba(16,185,129,0.15)", color: "#34d399", border: "1px solid rgba(16,185,129,0.3)" }}
+          >
+            <Star className="w-3 h-3" />
+            Xong
+          </div>
+        )}
+      </div>
+
+      {/* ── Standings ── */}
+      <div className="px-3 pt-3 pb-2">
+        <div className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-500 mb-1.5 flex items-center gap-1.5">
+          <Trophy className="w-3 h-3" style={{ color }} />
+          Bảng xếp hạng
+          <span className="text-[8px] text-slate-600">(Thắng=3 · Hòa=1)</span>
+        </div>
+        <StandingsTable group={group} onNameChange={onNameChange} />
+      </div>
+
+      {/* ── Matches toggle ── */}
+      <button
+        className="mx-3 mb-2 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5"
+        style={{
+          background: showMatches ? `${color}15` : "transparent",
+          color: showMatches ? color : "#475569",
+          border: `1px solid ${showMatches ? color + "30" : "#1e293b"}`,
+        }}
+        onClick={() => setShowMatches((v) => !v)}
+      >
+        <span>{showMatches ? "▾" : "▸"}</span>
+        Lịch & Kết quả trận đấu
+      </button>
+
+      {/* ── Matches ── */}
+      {showMatches && (
+        <div className="px-3 pb-3 space-y-1">
+          {group.matches.map((match, i) => (
+            <div key={match.id} className="flex items-center gap-1.5">
+              <span className="text-[9px] text-slate-600 font-mono w-5 shrink-0 text-right">{i + 1}.</span>
+              <div className="flex-1">
+                <MatchRow
+                  match={match}
+                  group={group}
+                  onScoreChange={(mId, slot, v) => onScoreChange(group.id, mId, slot, v)}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function BracketStage() {
-  const [bracketData, setBracketData] = useState<BracketData>([]);
+  const [data, setData] = useState<TournamentData>([]);
   const [hydrated, setHydrated] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      setBracketData(saved ? (JSON.parse(saved) as BracketData) : buildInitialBracket(generateDefaultTeams()));
+      setData(saved ? (JSON.parse(saved) as TournamentData) : generateInitialData());
     } catch {
-      setBracketData(buildInitialBracket(generateDefaultTeams()));
+      setData(generateInitialData());
     }
     setHydrated(true);
     /* eslint-enable react-hooks/set-state-in-effect */
@@ -467,328 +516,260 @@ export default function BracketStage() {
 
   useEffect(() => {
     if (!hydrated) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(bracketData));
-  }, [bracketData, hydrated]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }, [data, hydrated]);
 
-  const handleWinnerSelect = useCallback((matchId: string, teamId: string) => {
-    setBracketData((prev) => {
-      const match = prev.find((m) => m.id === matchId);
-      if (!match) return prev;
+  const handleScoreChange = useCallback(
+    (groupId: string, matchId: string, slot: "score1" | "score2", v: string) => {
+      setData((prev) =>
+        prev.map((g) =>
+          g.id !== groupId
+            ? g
+            : {
+                ...g,
+                matches: g.matches.map((m) =>
+                  m.id !== matchId ? m : { ...m, [slot]: v }
+                ),
+              }
+        )
+      );
+    },
+    []
+  );
 
-      if (!teamId || match.winnerId === teamId) {
-        const cleared = clearDescendants(prev, match.round, match.matchIndex);
-        return cleared.map((m) => m.id === matchId ? { ...m, winnerId: null } : m);
-      }
-
-      let updated = clearDescendants(prev, match.round, match.matchIndex);
-      updated = updated.map((m) => m.id === matchId ? { ...m, winnerId: teamId } : m);
-      const winner = teamId === match.team1?.id ? match.team1 : match.team2;
-      if (winner) updated = propagateWinner(updated, match.round, match.matchIndex, winner);
-      return updated;
-    });
-  }, []);
-
-  const handleScoreChange = useCallback((matchId: string, slot: "score1" | "score2", value: string) => {
-    setBracketData((prev) => prev.map((m) => m.id === matchId ? { ...m, [slot]: value } : m));
-  }, []);
-
-  const handleNameChange = useCallback((teamId: string, name: string) => {
-    setBracketData((prev) =>
-      prev.map((m) => {
-        let updated = { ...m };
-        if (m.team1?.id === teamId) updated = { ...updated, team1: { ...m.team1, name } };
-        if (m.team2?.id === teamId) updated = { ...updated, team2: { ...m.team2, name } };
-        return updated;
-      })
-    );
-  }, []);
+  const handleNameChange = useCallback(
+    (groupId: string, teamIdx: number, name: string) => {
+      setData((prev) =>
+        prev.map((g) =>
+          g.id !== groupId
+            ? g
+            : {
+                ...g,
+                teams: g.teams.map((t, i) => (i === teamIdx ? { ...t, name } : t)),
+              }
+        )
+      );
+    },
+    []
+  );
 
   const handleReset = () => {
     if (!confirm("Reset toàn bộ giải đấu? Dữ liệu sẽ bị xóa.")) return;
     localStorage.removeItem(STORAGE_KEY);
-    setBracketData(buildInitialBracket(generateDefaultTeams()));
+    setData(generateInitialData());
   };
 
-  const finalMatch = bracketData.find((m) => m.round === 4 && m.matchIndex === 0);
-  const champion = finalMatch?.winnerId
-    ? (finalMatch.team1?.id === finalMatch.winnerId ? finalMatch.team1 : finalMatch.team2)
-    : null;
+  // Summary stats
+  const totalPlayed = data.reduce(
+    (acc, g) => acc + g.matches.filter((m) => m.score1 !== "" && m.score2 !== "").length,
+    0
+  );
+  const totalMatches = data.reduce((acc, g) => acc + g.matches.length, 0);
+  const completedGroups = data.filter(groupCompleted).length;
 
   if (!hydrated) {
     return (
-      <div className="min-h-screen flex items-center justify-center"
-        style={{ background: "linear-gradient(145deg,#dbeafe,#e0f2fe,#cffafe)" }}>
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: "linear-gradient(145deg,#0c1929,#0f2a50)" }}
+      >
         <div className="flex flex-col items-center gap-3">
           <Plane className="w-8 h-8 text-cyan-500 animate-bounce" />
-          <span className="text-blue-600 font-semibold text-sm">Đang tải dữ liệu...</span>
+          <span className="text-sky-300 font-semibold text-sm" style={{ fontFamily: "'Montserrat',sans-serif" }}>
+            Đang tải dữ liệu...
+          </span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col relative" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+    <div className="min-h-screen flex flex-col relative" style={{ fontFamily: "'Montserrat',sans-serif" }}>
       <WorldMapPattern />
 
       {/* ── HERO HEADER ─────────────────────────────────────────────────────── */}
       <header
         className="relative z-10 w-full"
         style={{
-          background: "linear-gradient(135deg, #0f2a50 0%, #1e3a6e 50%, #0e4d7a 100%)",
-          boxShadow: "0 4px 32px rgba(15,42,80,0.35)",
+          background: "linear-gradient(135deg,#0c2340 0%,#1e3a6e 50%,#0e4d7a 100%)",
+          boxShadow: "0 4px 32px rgba(12,35,64,0.5)",
         }}
       >
-        {/* Top bar: logo + contact */}
-        <div className="max-w-full mx-auto px-6 py-3 flex items-center justify-between border-b border-white/10">
-          {/* Logo */}
+        {/* Top bar */}
+        <div className="px-6 py-2.5 flex items-center justify-between border-b border-white/10">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-white/15 border border-white/25 flex items-center justify-center overflow-hidden shadow-lg">
+            <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center overflow-hidden shadow-lg">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/logo.png"
-                alt="Nam Thanh Travel"
+                src="/logo.png" alt="Nam Thanh Travel"
                 className="w-full h-full object-contain"
                 onError={(e) => {
-                  const target = e.currentTarget;
-                  target.style.display = "none";
-                  target.nextElementSibling?.classList.remove("hidden");
+                  e.currentTarget.style.display = "none";
+                  e.currentTarget.nextElementSibling?.classList.remove("hidden");
                 }}
               />
-              <Plane className="w-6 h-6 text-orange-400 hidden" />
+              <Plane className="w-5 h-5 text-orange-400 hidden" />
             </div>
             <div>
-              <div className="text-white font-bold text-sm leading-tight tracking-wide">
-                NAM THANH TRAVEL
-              </div>
-              <div className="text-cyan-300 text-xs font-medium">Lữ hành quốc tế</div>
+              <div className="text-white font-black text-sm tracking-wide">NAM THANH TRAVEL</div>
+              <div className="text-cyan-300 text-[10px] font-medium">Lữ hành quốc tế</div>
             </div>
           </div>
 
-          {/* Contact info */}
-          <div className="hidden md:flex items-center gap-5 text-xs text-blue-200">
-            <a href="tel:1900xxxx" className="flex items-center gap-1.5 hover:text-orange-300 transition-colors">
-              <Phone className="w-3.5 h-3.5 text-orange-400" />
-              <span className="font-semibold">Hotline: 1900 xxxx</span>
-            </a>
-            <a href="https://namthanhtravel.com.vn" className="flex items-center gap-1.5 hover:text-cyan-300 transition-colors">
-              <Globe className="w-3.5 h-3.5 text-cyan-400" />
-              <span>namthanhtravel.com.vn</span>
-            </a>
+          <div className="hidden md:flex items-center gap-4 text-xs text-blue-200">
             <span className="flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-sky-400" />
-              <span>Hà Nội, Việt Nam</span>
+              <Phone className="w-3.5 h-3.5 text-orange-400" />
+              <span className="font-semibold">1900 xxxx</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5 text-cyan-400" />
+              namthanhtravel.com.vn
             </span>
           </div>
         </div>
 
-        {/* Main banner */}
-        <div className="px-6 py-5 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="text-center md:text-left">
+        {/* Banner */}
+        <div className="px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div>
             <h1
-              className="text-2xl md:text-3xl font-black text-white leading-tight tracking-wide"
-              style={{
-                textShadow: "0 2px 12px rgba(56,189,248,0.4), 0 4px 24px rgba(15,42,80,0.6)",
-                letterSpacing: "0.04em",
-              }}
+              className="text-xl md:text-2xl font-black text-white leading-tight"
+              style={{ textShadow: "0 2px 12px rgba(56,189,248,0.4)" }}
             >
               GIẢI ĐẤU
               <span
-                className="block md:inline text-transparent bg-clip-text ml-0 md:ml-3"
-                style={{ backgroundImage: "linear-gradient(90deg, #38bdf8, #f97316)" }}
+                className="ml-2 text-transparent bg-clip-text"
+                style={{ backgroundImage: "linear-gradient(90deg,#38bdf8,#f97316)" }}
               >
                 NAM THANH TRAVEL OPEN
               </span>
             </h1>
-            <p className="mt-1.5 text-cyan-200/90 text-sm font-medium tracking-widest">
+            <p className="text-cyan-200/80 text-xs font-medium tracking-widest mt-1">
               ✈ Chinh Phục Đỉnh Cao – Kết Nối Đam Mê ✈
             </p>
-            <div className="mt-2 flex items-center gap-3 justify-center md:justify-start">
-              <span className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/20 text-xs text-blue-200 font-medium">
-                32 Đội
-              </span>
-              <span className="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/20 text-xs text-blue-200 font-medium">
-                Single Elimination
-              </span>
-              <span className="px-2.5 py-0.5 rounded-full bg-orange-500/20 border border-orange-400/40 text-xs text-orange-300 font-medium">
-                Live 2025
-              </span>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {[
+                { label: "8 Bảng đấu", color: "#38bdf8" },
+                { label: "32 Đội", color: "#a78bfa" },
+                { label: "Vòng tròn tính điểm", color: "#f97316" },
+                { label: `${totalPlayed}/${totalMatches} Trận`, color: "#10b981" },
+                { label: `${completedGroups}/8 Bảng xong`, color: "#fbbf24" },
+              ].map(({ label, color }) => (
+                <span
+                  key={label}
+                  className="px-2.5 py-0.5 rounded-full text-[11px] font-bold"
+                  style={{ background: `${color}18`, color, border: `1px solid ${color}35` }}
+                >
+                  {label}
+                </span>
+              ))}
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Champion badge */}
-            {champion && (
-              <div
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border animate-pulse"
-                style={{
-                  background: "linear-gradient(135deg, rgba(251,191,36,0.2), rgba(249,115,22,0.15))",
-                  borderColor: "rgba(251,191,36,0.5)",
-                }}
-              >
-                <Trophy className="w-5 h-5 text-amber-400" />
-                <div>
-                  <div className="text-xs text-amber-300/80 font-medium">🏆 Vô Địch</div>
-                  <div className="text-sm font-black text-amber-300 leading-tight">{champion.name}</div>
-                </div>
-              </div>
-            )}
-
-            <button
-              onClick={handleReset}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold
-                bg-white/10 border border-white/20 text-blue-200
-                hover:bg-red-500/20 hover:border-red-400/50 hover:text-red-300
-                transition-all duration-200 backdrop-blur-sm"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              Reset
-            </button>
-          </div>
+          <button
+            onClick={handleReset}
+            className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold
+              bg-white/10 border border-white/20 text-blue-200
+              hover:bg-red-500/20 hover:border-red-400/50 hover:text-red-300
+              transition-all duration-200"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Reset
+          </button>
         </div>
       </header>
 
-      {/* ── AD STRIP ────────────────────────────────────────────────────────── */}
+      {/* ── AD STRIP ─────────────────────────────────────────────────────────── */}
       <div className="relative z-10">
         <AdBanner variant="strip" />
       </div>
 
-      {/* ── LEGEND BAR ──────────────────────────────────────────────────────── */}
-      <div className="relative z-10 px-6 py-2 flex flex-wrap items-center gap-4 text-xs"
-        style={{ background: "rgba(255,255,255,0.65)", backdropFilter: "blur(8px)", borderBottom: "1px solid rgba(147,197,253,0.4)" }}>
-        <span className="flex items-center gap-1.5 text-blue-600 font-medium">
-          <span className="w-3 h-3 rounded-full border-2 border-blue-400 inline-block" />
-          Click để chọn người thắng
+      {/* ── LEGEND ───────────────────────────────────────────────────────────── */}
+      <div
+        className="relative z-10 px-6 py-2 flex flex-wrap items-center gap-5 text-[11px]"
+        style={{ background: "rgba(15,23,42,0.9)", borderBottom: "1px solid rgba(148,163,184,0.1)" }}
+      >
+        <span className="text-slate-400 font-medium flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded bg-emerald-500/30 border border-emerald-500/50 inline-block" />
+          Top 2 mỗi bảng đi tiếp
         </span>
-        <span className="flex items-center gap-1.5 text-blue-600 font-medium">
-          <Edit3 className="w-3 h-3 text-cyan-600" />
-          Hover đội để đổi tên (Vòng 1)
+        <span className="text-slate-400 font-medium flex items-center gap-1.5">
+          <Edit3 className="w-3 h-3 text-sky-400" />
+          Double-click tên đội để đổi
         </span>
-        <span className="flex items-center gap-1.5 text-cyan-700 font-medium">
-          <Plane className="w-3 h-3 text-orange-500" />
-          Đội thắng tiến vào vòng tiếp
+        <span className="text-slate-400 font-medium flex items-center gap-1.5">
+          <Check className="w-3 h-3 text-teal-400" />
+          Thắng: 3đ · Hòa: 1đ · Thua: 0đ
         </span>
       </div>
 
-      {/* ── BRACKET AREA ────────────────────────────────────────────────────── */}
+      {/* ── GROUPS GRID ──────────────────────────────────────────────────────── */}
       <main
-        className="relative z-10 flex-1 overflow-x-auto pb-10 pt-5"
-        style={{ background: "transparent" }}
+        className="relative z-10 flex-1 px-4 md:px-6 py-6"
+        style={{ background: "linear-gradient(180deg,#0c1929 0%,#0a1628 100%)" }}
       >
-        <div ref={containerRef} className="relative inline-flex gap-0 px-6 min-w-max">
-          <Connectors containerRef={containerRef} bracketData={bracketData} />
+        {/* Progress bar */}
+        <div className="mb-5">
+          <div className="flex items-center justify-between text-xs mb-1.5">
+            <span className="text-slate-400 font-medium">Tiến độ giải đấu</span>
+            <span className="font-black" style={{ color: "#38bdf8" }}>
+              {Math.round((totalPlayed / totalMatches) * 100)}%
+            </span>
+          </div>
+          <div className="h-2 rounded-full overflow-hidden" style={{ background: "#1e293b" }}>
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${(totalPlayed / totalMatches) * 100}%`,
+                background: "linear-gradient(90deg,#1a56db,#0ea5e9,#38bdf8)",
+              }}
+            />
+          </div>
+          <div className="mt-1.5 text-[10px] text-slate-500">
+            {totalPlayed} / {totalMatches} trận đã có kết quả
+          </div>
+        </div>
 
-          {Array.from({ length: TOTAL_ROUNDS }, (_, r) => {
-            const matchCount = MATCH_COUNTS[r];
-            const matches = Array.from({ length: matchCount }, (_, m) =>
-              getMatch(bracketData, r, m)
-            ).filter(Boolean) as Match[];
+        {/* 8 Group cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {data.map((group) => (
+            <GroupCard
+              key={group.id}
+              group={group}
+              onScoreChange={handleScoreChange}
+              onNameChange={handleNameChange}
+            />
+          ))}
+        </div>
 
-            const slotHeight = 80 * Math.pow(2, r);
-            const totalHeight = slotHeight * matchCount;
-
-            // Column accent colors per round
-            const colStyle: React.CSSProperties =
-              r === 4
-                ? { background: "rgba(245,158,11,0.06)", borderRadius: 12, border: "1px solid rgba(245,158,11,0.2)" }
-                : r === 3
-                ? { background: "rgba(139,92,246,0.05)", borderRadius: 10, border: "1px solid rgba(139,92,246,0.15)" }
-                : r === 2
-                ? { background: "rgba(14,165,233,0.05)", borderRadius: 10, border: "1px solid rgba(14,165,233,0.12)" }
-                : { background: "rgba(255,255,255,0.45)", borderRadius: 8, border: "1px solid rgba(203,213,225,0.5)" };
-
-            return (
-              <div key={r} className="flex flex-col relative" style={{ zIndex: 1 }}>
-                {/* Round label */}
-                <div className="text-center mb-3 px-2">
-                  <span
-                    className="inline-block text-[10px] font-black uppercase tracking-[0.12em] whitespace-nowrap px-3 py-1 rounded-md"
-                    style={
-                      r === 4
-                        ? { background: "linear-gradient(90deg,#f59e0b,#ef4444)", color: "#fff", boxShadow: "0 2px 8px rgba(245,158,11,0.35)" }
-                        : r === 3
-                        ? { background: "rgba(139,92,246,0.15)", color: "#7c3aed", border: "1px solid rgba(139,92,246,0.3)" }
-                        : r === 2
-                        ? { background: "rgba(14,165,233,0.12)", color: "#0369a1", border: "1px solid rgba(14,165,233,0.25)" }
-                        : { background: "rgba(26,86,219,0.1)", color: "#1e40af", border: "1px solid rgba(26,86,219,0.2)" }
-                    }
-                  >
-                    {ROUND_NAMES[r]}
-                  </span>
-                </div>
-
-                {/* Column panel */}
-                <div
-                  className="flex flex-col justify-around pb-3"
-                  style={{ height: totalHeight > 0 ? `${totalHeight}px` : "auto", ...colStyle }}
-                >
-                  {matches.map((match) => (
-                    <div
-                      key={match.id}
-                      data-match={match.id}
-                      className="flex items-center"
-                      style={{ height: `${slotHeight}px` }}
-                    >
-                      <div className="px-3 relative z-10">
-                        <MatchCard
-                          match={match}
-                          onWinnerSelect={handleWinnerSelect}
-                          onScoreChange={handleScoreChange}
-                          onNameChange={handleNameChange}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Champion pedestal */}
-          {champion && (
-            <div className="flex flex-col items-center justify-center pl-4 relative z-10">
-              <div className="text-center mb-3">
-                <span
-                  className="text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full text-white"
-                  style={{ background: "linear-gradient(135deg, #f97316, #fbbf24)", boxShadow: "0 2px 12px rgba(249,115,22,0.5)" }}
-                >
-                  🏆 VÔ ĐỊCH
-                </span>
-              </div>
-              <div
-                className="flex flex-col items-center gap-3 px-5 py-5 rounded-2xl"
-                style={{
-                  background: "linear-gradient(145deg, rgba(251,191,36,0.15), rgba(249,115,22,0.10))",
-                  border: "2px solid rgba(251,191,36,0.5)",
-                  boxShadow: "0 8px 32px rgba(249,115,22,0.2), 0 0 0 4px rgba(251,191,36,0.08)",
-                }}
-              >
-                <Trophy className="w-10 h-10 text-amber-400" style={{ filter: "drop-shadow(0 0 8px rgba(251,191,36,0.6))" }} />
-                <span
-                  className="text-sm font-black text-amber-700 text-center max-w-36"
-                  style={{ wordBreak: "break-word" }}
-                >
-                  {champion.name}
-                </span>
-                <div className="flex gap-1">
-                  {[...Array(3)].map((_, i) => (
-                    <span key={i} className="text-lg">⭐</span>
-                  ))}
-                </div>
+        {/* All-groups completed message */}
+        {completedGroups === 8 && (
+          <div
+            className="mt-8 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-center gap-4 text-center"
+            style={{
+              background: "linear-gradient(135deg,rgba(16,185,129,0.15),rgba(14,165,233,0.1))",
+              border: "1.5px solid rgba(16,185,129,0.35)",
+            }}
+          >
+            <Trophy className="w-10 h-10 text-amber-400 shrink-0" style={{ filter: "drop-shadow(0 0 10px rgba(251,191,36,0.5))" }} />
+            <div>
+              <div className="font-black text-white text-xl mb-1">🎉 Vòng Bảng Hoàn Tất!</div>
+              <div className="text-emerald-300 text-sm">
+                16 đội đứng đầu bảng đã xác định — Sẵn sàng cho Vòng Loại Trực Tiếp!
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </main>
 
-      {/* ── FOOTER ──────────────────────────────────────────────────────────── */}
+      {/* ── FOOTER ───────────────────────────────────────────────────────────── */}
       <footer
-        className="relative z-10 w-full mt-auto"
+        className="relative z-10 w-full"
         style={{
-          background: "linear-gradient(135deg, #0f2a50 0%, #0e3d6b 100%)",
+          background: "linear-gradient(135deg,#0c2340 0%,#0e3d6b 100%)",
           borderTop: "2px solid rgba(56,189,248,0.2)",
         }}
       >
-        <div className="max-w-full mx-auto px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-3">
+        <div className="px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs text-blue-300/80">
             <Plane className="w-4 h-4 text-orange-400" />
             <span>
@@ -797,36 +778,19 @@ export default function BracketStage() {
               {" "}— Đơn vị lữ hành hàng đầu Việt Nam
             </span>
           </div>
-
           <div className="flex items-center gap-3">
-            <a
-              href="https://facebook.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-8 h-8 rounded-lg bg-white/10 border border-white/15 flex items-center justify-center
-                hover:bg-blue-600/40 hover:border-blue-400/50 transition-all duration-150"
-              title="Facebook"
-            >
-              <Facebook className="w-4 h-4 text-blue-300" />
-            </a>
-            <a
-              href="https://namthanhtravel.com.vn"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-8 h-8 rounded-lg bg-white/10 border border-white/15 flex items-center justify-center
-                hover:bg-cyan-500/30 hover:border-cyan-400/50 transition-all duration-150"
-              title="Website"
-            >
-              <Globe className="w-4 h-4 text-cyan-300" />
-            </a>
-            <a
-              href="tel:1900xxxx"
-              className="w-8 h-8 rounded-lg bg-white/10 border border-white/15 flex items-center justify-center
-                hover:bg-orange-500/30 hover:border-orange-400/50 transition-all duration-150"
-              title="Hotline"
-            >
-              <Phone className="w-4 h-4 text-orange-300" />
-            </a>
+            {[
+              { icon: Facebook, color: "#3b82f6", hover: "hover:bg-blue-600/40" },
+              { icon: Globe,    color: "#06b6d4", hover: "hover:bg-cyan-500/30" },
+              { icon: Phone,    color: "#f97316", hover: "hover:bg-orange-500/30" },
+            ].map(({ icon: Icon, color, hover }, i) => (
+              <button
+                key={i}
+                className={`w-8 h-8 rounded-lg bg-white/10 border border-white/15 flex items-center justify-center ${hover} transition-all`}
+              >
+                <Icon className="w-4 h-4" style={{ color }} />
+              </button>
+            ))}
           </div>
         </div>
       </footer>
