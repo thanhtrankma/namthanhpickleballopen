@@ -1,11 +1,21 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   Trophy, RotateCcw, Edit3, Check, Plane,
   Phone, Globe, Facebook, Star, ChevronUp,
+  Users, Calendar, Heart, ClipboardList, LayoutGrid,
 } from "lucide-react";
 import AdBanner from "@/components/AdBanner";
+import maleCouplesJson from "@/data/male-couples.json";
+import mixedCouplesJson from "@/data/mixed-couples.json";
+import matchScheduleJson from "@/data/match_schedule.json";
+import {
+  createWinnerLookup,
+  getDisplaySides,
+  needsKoScoreInput,
+  type KoScores,
+} from "@/lib/scheduleResolve";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,54 +43,65 @@ type TournamentData = Group[];
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const STORAGE_KEY = "tournament_group_v1";
-const GROUP_LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H"];
+const STORAGE_KEY = "tournament_male_v2";
+const STORAGE_KEY_MIXED = "tournament_mixed_v1";
+const SCHEDULE_KO_KEY = "schedule_ko_v1";
+const MALE_GROUP_LETTERS = ["A", "B", "C", "D", "E", "F"] as const;
+const MIXED_GROUP_LETTERS = ["A", "B", "C", "D"] as const;
 // All C(4,2) = 6 pairs for round-robin
 const RR_PAIRS: [number, number][] = [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]];
 
+const GROUP_COLORS = [
+  "#3b82f6", "#06b6d4", "#8b5cf6", "#ec4899",
+  "#f59e0b", "#10b981", "#ef4444", "#6366f1",
+];
+
 // ─── Initial data ─────────────────────────────────────────────────────────────
 
-function generateInitialData(): TournamentData {
-  let n = 1;
-  return GROUP_LETTERS.map((letter, g) => ({
-    id: `g${g}`,
-    letter,
-    teams: Array.from({ length: 4 }, (_, t) => ({
-      id: `t${n + t}`,
-      name: `Đội ${n + t}`,
-    })),
-    matches: RR_PAIRS.map(([i, j], m) => ({
-      id: `g${g}-m${m}`,
-      team1Idx: i,
-      team2Idx: j,
-      score1: "",
-      score2: "",
-    })),
-  })).map((g) => { n += 4; return g; })
-    // n increment happens after spread — fix with explicit counter below
-    .reduce<{ list: TournamentData; n: number }>(
-      (acc, _g, idx) => {
-        const start = idx * 4 + 1;
-        const g: Group = {
-          id: `g${idx}`,
-          letter: GROUP_LETTERS[idx],
-          teams: Array.from({ length: 4 }, (_, t) => ({
-            id: `t${start + t}`,
-            name: `Đội ${start + t}`,
-          })),
-          matches: RR_PAIRS.map(([i, j], m) => ({
-            id: `g${idx}-m${m}`,
-            team1Idx: i,
-            team2Idx: j,
-            score1: "",
-            score2: "",
-          })),
-        };
-        acc.list.push(g);
-        return acc;
-      },
-      { list: [], n: 1 }
-    ).list
+function buildMaleTournamentFromJson(): TournamentData {
+  const mc = maleCouplesJson.male_couples;
+  return MALE_GROUP_LETTERS.map((letter, idx) => {
+    const rows = mc[letter as keyof typeof mc];
+    const teams: Team[] = rows.map((t) => ({
+      id: t.id,
+      name: `${t.members[0]} & ${t.members[1]}`,
+    }));
+    return {
+      id: `g${idx}`,
+      letter,
+      teams,
+      matches: RR_PAIRS.map(([i, j], m) => ({
+        id: `g${idx}-m${m}`,
+        team1Idx: i,
+        team2Idx: j,
+        score1: "",
+        score2: "",
+      })),
+    };
+  });
+}
+
+function buildMixedTournamentFromJson(): TournamentData {
+  const mc = mixedCouplesJson.mixed_couples;
+  return MIXED_GROUP_LETTERS.map((letter, idx) => {
+    const rows = mc[letter as keyof typeof mc];
+    const teams: Team[] = rows.map((t) => ({
+      id: t.id,
+      name: `${t.male} & ${t.female}`,
+    }));
+    return {
+      id: `mx${idx}`,
+      letter,
+      teams,
+      matches: RR_PAIRS.map(([i, j], m) => ({
+        id: `mx${idx}-m${m}`,
+        team1Idx: i,
+        team2Idx: j,
+        score1: "",
+        score2: "",
+      })),
+    };
+  });
 }
 
 // ─── Standings calculation ────────────────────────────────────────────────────
@@ -388,11 +409,6 @@ function StandingsTable({
 
 // ─── Group Card ───────────────────────────────────────────────────────────────
 
-const GROUP_COLORS = [
-  "#3b82f6", "#06b6d4", "#8b5cf6", "#ec4899",
-  "#f59e0b", "#10b981", "#ef4444", "#6366f1",
-];
-
 function GroupCard({
   group,
   onScoreChange,
@@ -403,7 +419,7 @@ function GroupCard({
   onNameChange: (groupId: string, teamIdx: number, name: string) => void;
 }) {
   const [showMatches, setShowMatches] = useState(true);
-  const gIdx = GROUP_LETTERS.indexOf(group.letter);
+  const gIdx = MALE_GROUP_LETTERS.indexOf(group.letter as (typeof MALE_GROUP_LETTERS)[number]);
   const color = GROUP_COLORS[gIdx] ?? "#3b82f6";
   const played = group.matches.filter((m) => m.score1 !== "" && m.score2 !== "").length;
   const completed = played === 6;
@@ -496,19 +512,355 @@ function GroupCard({
   );
 }
 
+// ─── Data tables (JSON) ───────────────────────────────────────────────────────
+
+type MainTab = "male" | "mixed" | "schedule";
+type PairSubTab = "roster" | "bracket";
+
+function MixedCouplesTables() {
+  const groups = mixedCouplesJson.mixed_couples;
+  const letters = ["A", "B", "C", "D"] as const;
+  return (
+    <div className="space-y-6">
+      {letters.map((L) => {
+        const rows = groups[L];
+        const color = GROUP_COLORS[letters.indexOf(L)] ?? "#3b82f6";
+        return (
+          <div
+            key={L}
+            className="rounded-xl overflow-hidden border"
+            style={{ background: "#0f172a", borderColor: `${color}40` }}
+          >
+            <div
+              className="px-4 py-2.5 font-black text-sm text-white flex items-center gap-2"
+              style={{ background: `linear-gradient(90deg, ${color}28, transparent)` }}
+            >
+              <span
+                className="w-7 h-7 rounded-md flex items-center justify-center text-xs text-white font-black"
+                style={{ background: color }}
+              >
+                {L}
+              </span>
+              Bảng {L} — Đôi Nam Nữ
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs min-w-[640px]">
+                <thead>
+                  <tr className="border-b border-slate-700/80" style={{ background: "#0c1525" }}>
+                    <th className="px-3 py-2 font-black uppercase tracking-wider text-slate-500 w-12">Mã</th>
+                    <th className="px-3 py-2 font-black uppercase tracking-wider text-slate-500">Công ty / Đơn vị</th>
+                    <th className="px-3 py-2 font-black uppercase tracking-wider text-slate-500 w-16">Đôi</th>
+                    <th className="px-3 py-2 font-black uppercase tracking-wider text-slate-500">VĐV Nam</th>
+                    <th className="px-3 py-2 font-black uppercase tracking-wider text-slate-500">VĐV Nữ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.id} className="border-t border-slate-800/90 hover:bg-slate-800/40">
+                      <td className="px-3 py-2 font-mono font-bold text-sky-400 whitespace-nowrap">{r.id}</td>
+                      <td className="px-3 py-2 text-slate-300 max-w-[220px]">{r.company}</td>
+                      <td className="px-3 py-2 text-amber-400/90 whitespace-nowrap">{r.pair_id}</td>
+                      <td className="px-3 py-2 text-slate-200">{r.male}</td>
+                      <td className="px-3 py-2 text-slate-200">{r.female}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function MaleCouplesRosterTables() {
+  const groups = maleCouplesJson.male_couples;
+  return (
+    <div className="space-y-6">
+      {MALE_GROUP_LETTERS.map((L) => {
+        const rows = groups[L];
+        const color = GROUP_COLORS[MALE_GROUP_LETTERS.indexOf(L)] ?? "#3b82f6";
+        return (
+          <div
+            key={L}
+            className="rounded-xl overflow-hidden border"
+            style={{ background: "#0f172a", borderColor: `${color}40` }}
+          >
+            <div
+              className="px-4 py-2.5 font-black text-sm text-white flex items-center gap-2"
+              style={{ background: `linear-gradient(90deg, ${color}28, transparent)` }}
+            >
+              <span
+                className="w-7 h-7 rounded-md flex items-center justify-center text-xs text-white font-black"
+                style={{ background: color }}
+              >
+                {L}
+              </span>
+              Bảng {L} — Đôi Nam
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs min-w-[560px]">
+                <thead>
+                  <tr className="border-b border-slate-700/80" style={{ background: "#0c1525" }}>
+                    <th className="px-3 py-2 font-black uppercase tracking-wider text-slate-500 w-12">Mã</th>
+                    <th className="px-3 py-2 font-black uppercase tracking-wider text-slate-500">Công ty / Đơn vị</th>
+                    <th className="px-3 py-2 font-black uppercase tracking-wider text-slate-500 w-16">Đôi</th>
+                    <th className="px-3 py-2 font-black uppercase tracking-wider text-slate-500">Vận động viên</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.id} className="border-t border-slate-800/90 hover:bg-slate-800/40">
+                      <td className="px-3 py-2 font-mono font-bold text-sky-400 whitespace-nowrap">{r.id}</td>
+                      <td className="px-3 py-2 text-slate-300 max-w-[240px]">{r.company}</td>
+                      <td className="px-3 py-2 text-amber-400/90 whitespace-nowrap">{r.pair_id}</td>
+                      <td className="px-3 py-2 text-slate-200">
+                        {r.members[0]}
+                        <span className="text-slate-500 mx-1">·</span>
+                        {r.members[1]}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function QualifiersPanel({
+  maleData,
+  mixedData,
+}: {
+  maleData: TournamentData;
+  mixedData: TournamentData;
+}) {
+  return (
+    <div className="grid md:grid-cols-2 gap-4 mb-6">
+      <div
+        className="rounded-xl border border-sky-500/25 p-4"
+        style={{ background: "rgba(15,23,42,0.85)" }}
+      >
+        <div className="text-[10px] font-black uppercase tracking-widest text-sky-400 mb-3">
+          Đôi Nam — Top 2 mỗi bảng (theo điểm vòng bảng)
+        </div>
+        <div className="space-y-3 text-xs">
+          {maleData.map((g) => {
+            const top2 = calcStandings(g).slice(0, 2);
+            return (
+              <div key={g.id} className="flex flex-wrap gap-2 items-start">
+                <span className="font-mono font-bold text-amber-400 shrink-0">Bảng {g.letter}</span>
+                <div className="flex flex-col gap-1 min-w-0">
+                  {top2.map((row, i) => (
+                    <span key={row.team.id} className="text-slate-200">
+                      <span className="text-slate-500">{i === 0 ? "Nhất" : "Nhì"}:</span>{" "}
+                      <span className="font-semibold text-sky-200">{row.team.name}</span>
+                      <span className="text-slate-500 ml-1">({row.pts}đ)</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div
+        className="rounded-xl border border-pink-500/25 p-4"
+        style={{ background: "rgba(15,23,42,0.85)" }}
+      >
+        <div className="text-[10px] font-black uppercase tracking-widest text-pink-400 mb-3">
+          Đôi Nam Nữ — Top 2 mỗi bảng
+        </div>
+        <div className="space-y-3 text-xs">
+          {mixedData.map((g) => {
+            const top2 = calcStandings(g).slice(0, 2);
+            return (
+              <div key={g.id} className="flex flex-wrap gap-2 items-start">
+                <span className="font-mono font-bold text-amber-400 shrink-0">Bảng {g.letter}</span>
+                <div className="flex flex-col gap-1 min-w-0">
+                  {top2.map((row, i) => (
+                    <span key={row.team.id} className="text-slate-200">
+                      <span className="text-slate-500">{i === 0 ? "Nhất" : "Nhì"}:</span>{" "}
+                      <span className="font-semibold text-pink-200">{row.team.name}</span>
+                      <span className="text-slate-500 ml-1">({row.pts}đ)</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MatchScheduleTable({
+  maleData,
+  mixedData,
+  koScores,
+  onKoChange,
+}: {
+  maleData: TournamentData;
+  mixedData: TournamentData;
+  koScores: KoScores;
+  onKoChange: (stt: number, slot: "s1" | "s2", v: string) => void;
+}) {
+  const rows = matchScheduleJson.full_match_schedule;
+
+  const { winner } = useMemo(
+    () =>
+      createWinnerLookup(
+        rows as { stt: number; match: string; category: string; players?: string }[],
+        maleData,
+        mixedData,
+        koScores
+      ),
+    [rows, maleData, mixedData, koScores]
+  );
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden border border-slate-700/50"
+      style={{ background: "#0f172a" }}
+    >
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-[11px] min-w-[980px]">
+          <thead>
+            <tr style={{ background: "#0c1525" }} className="border-b border-slate-700/80">
+              <th className="px-2 py-2 font-black uppercase tracking-wider text-slate-500 w-9">STT</th>
+              <th className="px-2 py-2 font-black uppercase tracking-wider text-slate-500 w-14">Giờ</th>
+              <th className="px-2 py-2 font-black uppercase tracking-wider text-slate-500 w-20">Sân</th>
+              <th className="px-2 py-2 font-black uppercase tracking-wider text-slate-500 w-24">Nội dung</th>
+              <th className="px-2 py-2 font-black uppercase tracking-wider text-slate-500 min-w-[100px]">Trận (mã)</th>
+              <th className="px-2 py-2 font-black uppercase tracking-wider text-slate-500 min-w-[180px]">Đội 1</th>
+              <th className="px-2 py-2 font-black uppercase tracking-wider text-slate-500 min-w-[180px]">Đội 2</th>
+              <th className="px-2 py-2 font-black uppercase tracking-wider text-slate-500 w-28">Tỉ số</th>
+              <th className="px-2 py-2 font-black uppercase tracking-wider text-slate-500 w-36">Thắng</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => {
+              const rowIn = {
+                stt: r.stt,
+                match: r.match,
+                category: r.category,
+                players: r.players,
+              };
+              const sides = getDisplaySides(rowIn, maleData, mixedData, winner);
+              const needKo = needsKoScoreInput(rowIn);
+              const ks = koScores[r.stt];
+              const koLine =
+                ks && ks.s1 !== "" && ks.s2 !== ""
+                  ? `${ks.s1} – ${ks.s2}`
+                  : null;
+              const scoreDisplay = sides.rrScore ?? koLine ?? "—";
+              const wTeam = winner(r.stt);
+              return (
+                <tr key={r.stt} className="border-t border-slate-800/80 hover:bg-slate-800/35 align-top">
+                  <td className="px-2 py-1.5 font-mono text-slate-500">{r.stt}</td>
+                  <td className="px-2 py-1.5 font-semibold text-cyan-300/90 whitespace-nowrap">{r.time}</td>
+                  <td className="px-2 py-1.5 text-slate-300">{r.court}</td>
+                  <td className="px-2 py-1.5">
+                    <span
+                      className="inline-block px-2 py-0.5 rounded text-[10px] font-bold"
+                      style={{
+                        background:
+                          r.category === "Đôi Nam"
+                            ? "rgba(59,130,246,0.2)"
+                            : "rgba(236,72,153,0.18)",
+                        color: r.category === "Đôi Nam" ? "#93c5fd" : "#f9a8d4",
+                        border: `1px solid ${r.category === "Đôi Nam" ? "rgba(59,130,246,0.35)" : "rgba(236,72,153,0.35)"}`,
+                      }}
+                    >
+                      {r.category}
+                    </span>
+                  </td>
+                  <td className="px-2 py-1.5 text-slate-400 font-mono">{r.match}</td>
+                  <td className="px-2 py-1.5 text-slate-200">{sides.left}</td>
+                  <td className="px-2 py-1.5 text-slate-200">{sides.right}</td>
+                  <td className="px-2 py-1.5">
+                    {needKo ? (
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={ks?.s1 ?? ""}
+                          onChange={(e) =>
+                            onKoChange(
+                              r.stt,
+                              "s1",
+                              e.target.value.replace(/[^0-9]/g, "").slice(0, 2)
+                            )
+                          }
+                          placeholder="–"
+                          className="w-7 h-6 rounded text-center text-[10px] font-bold bg-slate-800 border border-slate-600 text-sky-200"
+                        />
+                        <span className="text-slate-600">–</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={ks?.s2 ?? ""}
+                          onChange={(e) =>
+                            onKoChange(
+                              r.stt,
+                              "s2",
+                              e.target.value.replace(/[^0-9]/g, "").slice(0, 2)
+                            )
+                          }
+                          placeholder="–"
+                          className="w-7 h-6 rounded text-center text-[10px] font-bold bg-slate-800 border border-slate-600 text-sky-200"
+                        />
+                      </div>
+                    ) : (
+                      <span className="text-emerald-400/90 font-bold">{scoreDisplay}</span>
+                    )}
+                  </td>
+                  <td className="px-2 py-1.5 text-amber-300/90 font-medium truncate max-w-[140px]" title={wTeam?.name}>
+                    {wTeam?.name ?? "—"}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p className="px-3 py-2 text-[10px] text-slate-500 border-t border-slate-800">
+        Vòng tròn: tỉ số lấy tự động từ bảng đấu Đôi Nam / Đôi Nam Nữ. Các trận sau vòng bảng: nhập tỉ số ô bên trái — ô bên phải
+        (đội 1 — đội 2 theo cột); hệ thống suy ra đội thắng và các trận tiếp theo.
+      </p>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function BracketStage() {
   const [data, setData] = useState<TournamentData>([]);
+  const [mixedData, setMixedData] = useState<TournamentData>([]);
+  const [koScores, setKoScores] = useState<KoScores>({});
   const [hydrated, setHydrated] = useState(false);
+  const [mainTab, setMainTab] = useState<MainTab>("male");
+  const [maleSubTab, setMaleSubTab] = useState<PairSubTab>("roster");
+  const [mixedSubTab, setMixedSubTab] = useState<PairSubTab>("roster");
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      setData(saved ? (JSON.parse(saved) as TournamentData) : generateInitialData());
+      setData(saved ? (JSON.parse(saved) as TournamentData) : buildMaleTournamentFromJson());
+      const savedM = localStorage.getItem(STORAGE_KEY_MIXED);
+      setMixedData(savedM ? (JSON.parse(savedM) as TournamentData) : buildMixedTournamentFromJson());
+      const savedKo = localStorage.getItem(SCHEDULE_KO_KEY);
+      setKoScores(savedKo ? (JSON.parse(savedKo) as KoScores) : {});
     } catch {
-      setData(generateInitialData());
+      setData(buildMaleTournamentFromJson());
+      setMixedData(buildMixedTournamentFromJson());
+      setKoScores({});
     }
     setHydrated(true);
     /* eslint-enable react-hooks/set-state-in-effect */
@@ -518,6 +870,16 @@ export default function BracketStage() {
     if (!hydrated) return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }, [data, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(STORAGE_KEY_MIXED, JSON.stringify(mixedData));
+  }, [mixedData, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(SCHEDULE_KO_KEY, JSON.stringify(koScores));
+  }, [koScores, hydrated]);
 
   const handleScoreChange = useCallback(
     (groupId: string, matchId: string, slot: "score1" | "score2", v: string) => {
@@ -553,10 +915,66 @@ export default function BracketStage() {
     []
   );
 
+  const handleScoreChangeMixed = useCallback(
+    (groupId: string, matchId: string, slot: "score1" | "score2", v: string) => {
+      setMixedData((prev) =>
+        prev.map((g) =>
+          g.id !== groupId
+            ? g
+            : {
+                ...g,
+                matches: g.matches.map((m) =>
+                  m.id !== matchId ? m : { ...m, [slot]: v }
+                ),
+              }
+        )
+      );
+    },
+    []
+  );
+
+  const handleNameChangeMixed = useCallback(
+    (groupId: string, teamIdx: number, name: string) => {
+      setMixedData((prev) =>
+        prev.map((g) =>
+          g.id !== groupId
+            ? g
+            : {
+                ...g,
+                teams: g.teams.map((t, i) => (i === teamIdx ? { ...t, name } : t)),
+              }
+        )
+      );
+    },
+    []
+  );
+
+  const handleKoChange = useCallback((stt: number, slot: "s1" | "s2", v: string) => {
+    setKoScores((prev) => {
+      const cur = prev[stt] ?? { s1: "", s2: "" };
+      return {
+        ...prev,
+        [stt]: { ...cur, [slot === "s1" ? "s1" : "s2"]: v },
+      };
+    });
+  }, []);
+
   const handleReset = () => {
-    if (!confirm("Reset toàn bộ giải đấu? Dữ liệu sẽ bị xóa.")) return;
+    if (mainTab === "schedule") {
+      if (!confirm("Xóa toàn bộ tỉ số nhập cho các trận knock-out trên lịch?")) return;
+      localStorage.removeItem(SCHEDULE_KO_KEY);
+      setKoScores({});
+      return;
+    }
+    if (mainTab === "mixed") {
+      if (!confirm("Reset bảng đấu Đôi Nam Nữ? Điểm và tên chỉnh sửa sẽ mất.")) return;
+      localStorage.removeItem(STORAGE_KEY_MIXED);
+      setMixedData(buildMixedTournamentFromJson());
+      return;
+    }
+    if (!confirm("Reset bảng đấu Đôi Nam? Điểm và tên chỉnh sửa sẽ mất.")) return;
     localStorage.removeItem(STORAGE_KEY);
-    setData(generateInitialData());
+    setData(buildMaleTournamentFromJson());
   };
 
   // Summary stats
@@ -566,6 +984,13 @@ export default function BracketStage() {
   );
   const totalMatches = data.reduce((acc, g) => acc + g.matches.length, 0);
   const completedGroups = data.filter(groupCompleted).length;
+
+  const totalPlayedMixed = mixedData.reduce(
+    (acc, g) => acc + g.matches.filter((m) => m.score1 !== "" && m.score2 !== "").length,
+    0
+  );
+  const totalMatchesMixed = mixedData.reduce((acc, g) => acc + g.matches.length, 0);
+  const completedGroupsMixed = mixedData.filter(groupCompleted).length;
 
   if (!hydrated) {
     return (
@@ -640,19 +1065,46 @@ export default function BracketStage() {
                 className="ml-2 text-transparent bg-clip-text"
                 style={{ backgroundImage: "linear-gradient(90deg,#38bdf8,#f97316)" }}
               >
-                NAM THANH TRAVEL OPEN
+                NAM THANH & PARTNERS PICKLEBALL CUP 2026
               </span>
             </h1>
             <p className="text-cyan-200/80 text-xs font-medium tracking-widest mt-1">
-              ✈ Chinh Phục Đỉnh Cao – Kết Nối Đam Mê ✈
+              ✈ Chinh Phục Đỉnh Cao – Kết Nối Đam Mê ✈ 2026
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              {[
-                { label: "8 Bảng đấu", color: "#38bdf8" },
-                { label: "32 Đội", color: "#a78bfa" },
+              {mainTab === "male" && [
+                { label: "6 Bảng đấu", color: "#38bdf8" },
+                { label: "24 Đội", color: "#a78bfa" },
                 { label: "Vòng tròn tính điểm", color: "#f97316" },
                 { label: `${totalPlayed}/${totalMatches} Trận`, color: "#10b981" },
-                { label: `${completedGroups}/8 Bảng xong`, color: "#fbbf24" },
+                { label: `${completedGroups}/6 Bảng xong`, color: "#fbbf24" },
+              ].map(({ label, color }) => (
+                <span
+                  key={label}
+                  className="px-2.5 py-0.5 rounded-full text-[11px] font-bold"
+                  style={{ background: `${color}18`, color, border: `1px solid ${color}35` }}
+                >
+                  {label}
+                </span>
+              ))}
+              {mainTab === "mixed" && [
+                { label: "4 Bảng đấu", color: "#ec4899" },
+                { label: "16 Đội", color: "#a78bfa" },
+                { label: "Vòng tròn tính điểm", color: "#f97316" },
+                { label: `${totalPlayedMixed}/${totalMatchesMixed} Trận`, color: "#10b981" },
+                { label: `${completedGroupsMixed}/4 Bảng xong`, color: "#fbbf24" },
+              ].map(({ label, color }) => (
+                <span
+                  key={label}
+                  className="px-2.5 py-0.5 rounded-full text-[11px] font-bold"
+                  style={{ background: `${color}18`, color, border: `1px solid ${color}35` }}
+                >
+                  {label}
+                </span>
+              ))}
+              {mainTab === "schedule" && [
+                { label: `${matchScheduleJson.full_match_schedule.length} trận dự kiến`, color: "#10b981" },
+                { label: "Đôi Nam & Đôi Nam Nữ", color: "#38bdf8" },
               ].map(({ label, color }) => (
                 <span
                   key={label}
@@ -679,85 +1131,293 @@ export default function BracketStage() {
       </header>
 
       {/* ── AD STRIP ─────────────────────────────────────────────────────────── */}
-      <div className="relative z-10">
+      {/* <div className="relative z-10">
         <AdBanner variant="strip" />
-      </div>
+      </div> */}
 
-      {/* ── LEGEND ───────────────────────────────────────────────────────────── */}
+      {/* ── TABS + LEGEND ────────────────────────────────────────────────────── */}
       <div
-        className="relative z-10 px-6 py-2 flex flex-wrap items-center gap-5 text-[11px]"
-        style={{ background: "rgba(15,23,42,0.9)", borderBottom: "1px solid rgba(148,163,184,0.1)" }}
+        className="relative z-10 border-b border-slate-700/50"
+        style={{ background: "rgba(15,23,42,0.95)" }}
       >
-        <span className="text-slate-400 font-medium flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded bg-emerald-500/30 border border-emerald-500/50 inline-block" />
-          Top 2 mỗi bảng đi tiếp
-        </span>
-        <span className="text-slate-400 font-medium flex items-center gap-1.5">
-          <Edit3 className="w-3 h-3 text-sky-400" />
-          Double-click tên đội để đổi
-        </span>
-        <span className="text-slate-400 font-medium flex items-center gap-1.5">
-          <Check className="w-3 h-3 text-teal-400" />
-          Thắng: 3đ · Hòa: 1đ · Thua: 0đ
-        </span>
+        <div className="px-4 md:px-6 pt-3 flex flex-wrap gap-2">
+          {([
+            { id: "male" as const, label: "Đôi Nam", Icon: Users },
+            { id: "mixed" as const, label: "Đôi Nam Nữ", Icon: Heart },
+            { id: "schedule" as const, label: "Lịch thi đấu", Icon: Calendar },
+          ]).map(({ id, label, Icon }) => {
+            const active = mainTab === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setMainTab(id)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all duration-150"
+                style={
+                  active
+                    ? {
+                        background: "linear-gradient(135deg,rgba(14,165,233,0.25),rgba(59,130,246,0.15))",
+                        color: "#e0f2fe",
+                        border: "1px solid rgba(56,189,248,0.45)",
+                        boxShadow: "0 0 16px rgba(14,165,233,0.15)",
+                      }
+                    : {
+                        background: "rgba(255,255,255,0.04)",
+                        color: "#94a3b8",
+                        border: "1px solid rgba(148,163,184,0.15)",
+                      }
+                }
+              >
+                <Icon className="w-3.5 h-3.5 shrink-0" />
+                {label}
+              </button>
+            );
+          })}
+        </div>
+        {mainTab === "male" && maleSubTab === "bracket" && (
+          <div className="px-4 md:px-6 py-2 flex flex-wrap items-center gap-5 text-[11px] border-t border-slate-800/80 mt-2">
+            <span className="text-slate-400 font-medium flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded bg-emerald-500/30 border border-emerald-500/50 inline-block" />
+              Top 2 mỗi bảng đi tiếp
+            </span>
+            <span className="text-slate-400 font-medium flex items-center gap-1.5">
+              <Edit3 className="w-3 h-3 text-sky-400" />
+              Double-click tên đội để đổi
+            </span>
+            <span className="text-slate-400 font-medium flex items-center gap-1.5">
+              <Check className="w-3 h-3 text-teal-400" />
+              Thắng: 3đ · Hòa: 1đ · Thua: 0đ
+            </span>
+          </div>
+        )}
+        {mainTab === "mixed" && mixedSubTab === "bracket" && (
+          <div className="px-4 md:px-6 py-2 flex flex-wrap items-center gap-5 text-[11px] border-t border-slate-800/80 mt-2">
+            <span className="text-slate-400 font-medium flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded bg-pink-500/30 border border-pink-500/50 inline-block" />
+              Top 2 mỗi bảng đi tiếp
+            </span>
+            <span className="text-slate-400 font-medium flex items-center gap-1.5">
+              <Edit3 className="w-3 h-3 text-pink-400" />
+              Double-click tên đội để đổi
+            </span>
+            <span className="text-slate-400 font-medium flex items-center gap-1.5">
+              <Check className="w-3 h-3 text-teal-400" />
+              Thắng: 3đ · Hòa: 1đ · Thua: 0đ
+            </span>
+          </div>
+        )}
+        {mainTab === "schedule" && (
+          <div className="px-4 md:px-6 py-2 text-[11px] text-slate-500 border-t border-slate-800/80 mt-2">
+            Tỉ số vòng tròn đồng bộ từ hai tab bảng đấu; nhập tỉ số knock-out trực tiếp trên bảng lịch (ô tỉ số).
+          </div>
+        )}
       </div>
 
-      {/* ── GROUPS GRID ──────────────────────────────────────────────────────── */}
+      {/* ── MAIN: TAB CONTENT ───────────────────────────────────────────────── */}
       <main
         className="relative z-10 flex-1 px-4 md:px-6 py-6"
         style={{ background: "linear-gradient(180deg,#0c1929 0%,#0a1628 100%)" }}
       >
-        {/* Progress bar */}
-        <div className="mb-5">
-          <div className="flex items-center justify-between text-xs mb-1.5">
-            <span className="text-slate-400 font-medium">Tiến độ giải đấu</span>
-            <span className="font-black" style={{ color: "#38bdf8" }}>
-              {Math.round((totalPlayed / totalMatches) * 100)}%
-            </span>
-          </div>
-          <div className="h-2 rounded-full overflow-hidden" style={{ background: "#1e293b" }}>
-            <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{
-                width: `${(totalPlayed / totalMatches) * 100}%`,
-                background: "linear-gradient(90deg,#1a56db,#0ea5e9,#38bdf8)",
-              }}
-            />
-          </div>
-          <div className="mt-1.5 text-[10px] text-slate-500">
-            {totalPlayed} / {totalMatches} trận đã có kết quả
-          </div>
-        </div>
-
-        {/* 8 Group cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {data.map((group) => (
-            <GroupCard
-              key={group.id}
-              group={group}
-              onScoreChange={handleScoreChange}
-              onNameChange={handleNameChange}
-            />
-          ))}
-        </div>
-
-        {/* All-groups completed message */}
-        {completedGroups === 8 && (
-          <div
-            className="mt-8 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-center gap-4 text-center"
-            style={{
-              background: "linear-gradient(135deg,rgba(16,185,129,0.15),rgba(14,165,233,0.1))",
-              border: "1.5px solid rgba(16,185,129,0.35)",
-            }}
-          >
-            <Trophy className="w-10 h-10 text-amber-400 shrink-0" style={{ filter: "drop-shadow(0 0 10px rgba(251,191,36,0.5))" }} />
-            <div>
-              <div className="font-black text-white text-xl mb-1">🎉 Vòng Bảng Hoàn Tất!</div>
-              <div className="text-emerald-300 text-sm">
-                16 đội đứng đầu bảng đã xác định — Sẵn sàng cho Vòng Loại Trực Tiếp!
+        {mainTab === "male" && (
+          <>
+            {/* Progress bar */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between text-xs mb-1.5">
+                <span className="text-slate-400 font-medium">Tiến độ giải đấu (Đôi Nam)</span>
+                <span className="font-black" style={{ color: "#38bdf8" }}>
+                  {totalMatches ? Math.round((totalPlayed / totalMatches) * 100) : 0}%
+                </span>
+              </div>
+              <div className="h-2 rounded-full overflow-hidden" style={{ background: "#1e293b" }}>
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${totalMatches ? (totalPlayed / totalMatches) * 100 : 0}%`,
+                    background: "linear-gradient(90deg,#1a56db,#0ea5e9,#38bdf8)",
+                  }}
+                />
+              </div>
+              <div className="mt-1.5 text-[10px] text-slate-500">
+                {totalPlayed} / {totalMatches} trận đã có kết quả
               </div>
             </div>
-          </div>
+
+            <div className="flex flex-wrap gap-2 mb-6">
+              {([
+                { id: "roster" as const, label: "Danh sách đăng ký theo bảng", Icon: ClipboardList },
+                { id: "bracket" as const, label: "Bảng đấu — nhập điểm", Icon: LayoutGrid },
+              ]).map(({ id, label, Icon }) => {
+                const active = maleSubTab === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setMaleSubTab(id)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-bold transition-all duration-150"
+                    style={
+                      active
+                        ? {
+                            background: "rgba(56,189,248,0.18)",
+                            color: "#e0f2fe",
+                            border: "1px solid rgba(56,189,248,0.45)",
+                          }
+                        : {
+                            background: "rgba(255,255,255,0.04)",
+                            color: "#94a3b8",
+                            border: "1px solid rgba(148,163,184,0.12)",
+                          }
+                    }
+                  >
+                    <Icon className="w-3.5 h-3.5 shrink-0 opacity-90" />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {maleSubTab === "roster" && <MaleCouplesRosterTables />}
+
+            {maleSubTab === "bracket" && (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-4">
+                  {data.map((group) => (
+                    <GroupCard
+                      key={group.id}
+                      group={group}
+                      onScoreChange={handleScoreChange}
+                      onNameChange={handleNameChange}
+                    />
+                  ))}
+                </div>
+
+                {completedGroups === 6 && (
+                  <div
+                    className="mt-8 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-center gap-4 text-center"
+                    style={{
+                      background: "linear-gradient(135deg,rgba(16,185,129,0.15),rgba(14,165,233,0.1))",
+                      border: "1.5px solid rgba(16,185,129,0.35)",
+                    }}
+                  >
+                    <Trophy className="w-10 h-10 text-amber-400 shrink-0" style={{ filter: "drop-shadow(0 0 10px rgba(251,191,36,0.5))" }} />
+                    <div>
+                      <div className="font-black text-white text-xl mb-1">🎉 Vòng Bảng Hoàn Tất!</div>
+                      <div className="text-emerald-300 text-sm">
+                        12 đội đứng đầu bảng đã xác định — Sẵn sàng cho Vòng Loại Trực Tiếp!
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </>
+        )}
+
+        {mainTab === "mixed" && (
+          <>
+            <div className="mb-6">
+              <div className="flex items-center justify-between text-xs mb-1.5">
+                <span className="text-slate-400 font-medium">Tiến độ giải đấu (Đôi Nam Nữ)</span>
+                <span className="font-black" style={{ color: "#f472b6" }}>
+                  {totalMatchesMixed ? Math.round((totalPlayedMixed / totalMatchesMixed) * 100) : 0}%
+                </span>
+              </div>
+              <div className="h-2 rounded-full overflow-hidden" style={{ background: "#1e293b" }}>
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${totalMatchesMixed ? (totalPlayedMixed / totalMatchesMixed) * 100 : 0}%`,
+                    background: "linear-gradient(90deg,#db2777,#f472b6,#fbcfe8)",
+                  }}
+                />
+              </div>
+              <div className="mt-1.5 text-[10px] text-slate-500">
+                {totalPlayedMixed} / {totalMatchesMixed} trận đã có kết quả
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 mb-6">
+              {([
+                { id: "roster" as const, label: "Danh sách đăng ký theo bảng", Icon: ClipboardList },
+                { id: "bracket" as const, label: "Bảng đấu — nhập điểm", Icon: LayoutGrid },
+              ]).map(({ id, label, Icon }) => {
+                const active = mixedSubTab === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setMixedSubTab(id)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-bold transition-all duration-150"
+                    style={
+                      active
+                        ? {
+                            background: "rgba(244,114,182,0.2)",
+                            color: "#fce7f3",
+                            border: "1px solid rgba(244,114,182,0.5)",
+                          }
+                        : {
+                            background: "rgba(255,255,255,0.04)",
+                            color: "#94a3b8",
+                            border: "1px solid rgba(148,163,184,0.12)",
+                          }
+                    }
+                  >
+                    <Icon className="w-3.5 h-3.5 shrink-0 opacity-90" />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {mixedSubTab === "roster" && <MixedCouplesTables />}
+
+            {mixedSubTab === "bracket" && (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-4">
+                  {mixedData.map((group) => (
+                    <GroupCard
+                      key={group.id}
+                      group={group}
+                      onScoreChange={handleScoreChangeMixed}
+                      onNameChange={handleNameChangeMixed}
+                    />
+                  ))}
+                </div>
+
+                {completedGroupsMixed === 4 && (
+                  <div
+                    className="mt-8 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-center gap-4 text-center"
+                    style={{
+                      background: "linear-gradient(135deg,rgba(236,72,153,0.15),rgba(244,114,182,0.08))",
+                      border: "1.5px solid rgba(236,72,153,0.35)",
+                    }}
+                  >
+                    <Trophy className="w-10 h-10 text-pink-400 shrink-0" />
+                    <div>
+                      <div className="font-black text-white text-xl mb-1">🎉 Vòng bảng Đôi Nam Nữ hoàn tất!</div>
+                      <div className="text-pink-200 text-sm">
+                        8 đội đứng đầu bảng đã xác định — Sẵn sàng cho vòng knock-out.
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </>
+        )}
+
+        {mainTab === "schedule" && (
+          <>
+            <p className="text-slate-400 text-sm mb-5 max-w-2xl">
+              Lịch đồng bộ với điểm vòng tròn (Đôi Nam / Đôi Nam Nữ). Các trận sau vòng bảng: nhập tỉ số trên lịch để suy ra đội thắng và các cặp tiếp theo.
+            </p>
+            <QualifiersPanel maleData={data} mixedData={mixedData} />
+            <MatchScheduleTable
+              maleData={data}
+              mixedData={mixedData}
+              koScores={koScores}
+              onKoChange={handleKoChange}
+            />
+          </>
         )}
       </main>
 

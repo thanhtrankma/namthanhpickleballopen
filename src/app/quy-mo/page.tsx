@@ -71,7 +71,7 @@ export default function QuyMoPage() {
   return (
     <PageLayout
       title="Quy mô & Giải thưởng"
-      subtitle="Toàn cảnh giải đấu Nam Thanh Travel Open 2025"
+      subtitle="Toàn cảnh giải đấu NAM THANH & PARTNERS PICKLEBALL CUP 2026 2025"
     >
       {/* Stats grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">

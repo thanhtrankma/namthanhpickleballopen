@@ -1,8 +1,8 @@
+import Link from "next/link";
 import PageLayout from "@/components/PageLayout";
-import AdBanner from "@/components/AdBanner";
 import {
   Users, Clock, Trophy, Shield, CheckCircle,
-  AlertCircle, Star, Plane, Award,
+  AlertCircle, Star, Plane, Award, Heart,
 } from "lucide-react";
 
 function SectionCard({
@@ -28,7 +28,7 @@ function SectionCard({
         >
           <Icon className="w-5 h-5" />
         </div>
-        <h2 className="font-black text-slate-800 text-base">{title}</h2>
+        <h2 className="font-black text-slate-800 text-base leading-snug">{title}</h2>
       </div>
       <div className="px-5 py-4">{children}</div>
     </div>
@@ -67,40 +67,94 @@ function Warn({ text }: { text: string }) {
   );
 }
 
+function SubHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 mt-4 mb-2 first:mt-0">
+      {children}
+    </h3>
+  );
+}
+
+function RuleLine({ children }: { children: React.ReactNode }) {
+  return <p className="text-slate-700 text-sm leading-relaxed pl-0">{children}</p>;
+}
+
 export default function TheLePage() {
   return (
     <PageLayout
       title="Thể lệ Giải đấu"
-      subtitle="Nam Thanh Travel Open 2025 · Quy định & Điều lệ chính thức"
+      subtitle="NAM THANH & PARTNERS PICKLEBALL CUP 2026 · Quy định & Điều lệ"
     >
-      {/* Ad banner strip */}
-      <div className="mb-8">
-        <AdBanner variant="horizontal" />
-      </div>
-
       <div className="grid md:grid-cols-2 gap-5">
-        {/* Format */}
-        <SectionCard icon={Trophy} title="Hình thức thi đấu" color="#1a56db">
-          <ul className="space-y-0">
-            <Rule index={1} text="Giải đấu theo hình thức Single Elimination (Loại trực tiếp) — thua là dừng cuộc chơi." />
-            <Rule index={2} text="32 đội tham gia, thi đấu qua 5 vòng: Vòng 32 → Vòng 16 → Tứ kết → Bán kết → Chung kết." />
-            <Rule index={3} text="Kết quả mỗi trận được ban tổ chức xác nhận và cập nhật trực tiếp trên bảng đấu online." />
-            <Rule index={4} text="Mỗi trận đấu thi đấu một lượt duy nhất (Best of 1). Vòng Bán kết và Chung kết thi đấu Best of 3." />
+        {/* Đôi Nam Nữ */}
+        <SectionCard
+          icon={Heart}
+          title="Thể lệ giải đấu — Đôi Nam Nữ"
+          color="#ec4899"
+        >
+          <p className="text-slate-600 text-sm font-semibold mb-3">
+            Giải đấu: <span className="text-slate-800">NAM THANH & PARTNERS PICKLEBALL CUP 2026</span>
+          </p>
+          <SubHeading>Số lượng tham dự</SubHeading>
+          <RuleLine>16 cặp thi đấu.</RuleLine>
+          <SubHeading>Vòng bảng</SubHeading>
+          <ul className="list-disc pl-5 space-y-1.5 text-slate-700 text-sm">
+            <li>16 đội chia thành 4 bảng (mỗi bảng 4 đội).</li>
+            <li>Thi đấu vòng tròn tính điểm.</li>
+            <li>
+              Cách tính điểm: <strong>Thắng: 1 điểm</strong> — <strong>Thua: 0 điểm</strong>.
+            </li>
+            <li>Mỗi trận thi đấu chạm 11 điểm.</li>
+            <li>Nếu 2 đội bằng điểm: xét thành tích đối đầu trực tiếp.</li>
           </ul>
+          <SubHeading>Vé vào vòng Tứ kết</SubHeading>
+          <RuleLine>
+            2 đội <strong>Nhất</strong> &amp; <strong>Nhì</strong> mỗi bảng vào vòng Tứ kết.
+          </RuleLine>
+          <SubHeading>Vòng knock-out</SubHeading>
+          <RuleLine>
+            Vòng Tứ kết, Bán kết, Chung kết thi đấu <strong>loại trực tiếp</strong>.
+          </RuleLine>
+        </SectionCard>
+
+        {/* Đôi Nam */}
+        <SectionCard icon={Users} title="Thể lệ giải đấu — Đôi Nam" color="#2563eb">
+          <p className="text-slate-600 text-sm font-semibold mb-3">
+            Giải đấu: <span className="text-slate-800">NAM THANH & PARTNERS PICKLEBALL CUP 2026</span>
+          </p>
+          <SubHeading>Số lượng tham dự</SubHeading>
+          <RuleLine>24 cặp thi đấu.</RuleLine>
+          <SubHeading>Vòng bảng</SubHeading>
+          <ul className="list-disc pl-5 space-y-1.5 text-slate-700 text-sm">
+            <li>24 đội chia thành 6 bảng (mỗi bảng 4 đội).</li>
+            <li>Thi đấu vòng tròn tính điểm.</li>
+            <li>
+              Cách tính điểm: <strong>Thắng: 1 điểm</strong> — <strong>Thua: 0 điểm</strong>.
+            </li>
+            <li>Mỗi trận thi đấu chạm 11 điểm.</li>
+            <li>Nếu 2 đội bằng điểm: xét thành tích đối đầu trực tiếp.</li>
+          </ul>
+          <SubHeading>Vé vào vòng Tứ kết</SubHeading>
+          <RuleLine>
+            2 đội <strong>Nhất</strong> &amp; <strong>Nhì</strong> mỗi bảng +{" "}
+            <strong>4 đội hạng 3</strong> có thành tích tốt nhất.
+          </RuleLine>
+          <SubHeading>Vòng knock-out</SubHeading>
+          <RuleLine>
+            Từ vòng 1/8 thi đấu loại trực tiếp đến Chung kết.
+          </RuleLine>
         </SectionCard>
 
         {/* Eligibility */}
         <SectionCard icon={Users} title="Điều kiện tham gia" color="#0ea5e9">
           <ul className="space-y-0">
-            <ul className="space-y-0">
-              <Check2 text="Đội có từ 5 đến 11 thành viên chính thức. Được đăng ký tối đa 3 dự bị." />
-              <Check2 text="Thành viên đủ 18 tuổi trở lên. Xuất trình CMND/CCCD khi đăng ký." />
-              <Check2 text="Đội đến từ các tỉnh thành trên cả nước đều được chào đón tham gia." />
-              <Check2 text="Phí đăng ký: 500.000đ/đội (đã bao gồm bộ quần áo thi đấu)." />
-              <Check2 text="Nộp danh sách đội trước ngày 15/05/2025. Sau thời hạn sẽ không được xét duyệt." />
-              <Warn text="Thành viên của một đội không được đăng ký thi đấu cho đội khác trong cùng giải." />
-              <Warn text="Ban tổ chức có quyền từ chối đội không đáp ứng đủ điều kiện tham dự." />
-            </ul>
+            <Check2 text="Đội có từ 5 đến 11 thành viên chính thức. Được đăng ký tối đa 3 dự bị." />
+            <Check2 text="Thành viên đủ 18 tuổi trở lên. Xuất trình CMND/CCCD khi đăng ký." />
+            <Check2 text="Đội đến từ các tỉnh thành trên cả nước đều được chào đón tham gia." />
+            <Check2 text="Phí đăng ký: 500.000đ/đội (đã bao gồm bộ quần áo thi đấu)." />
+            <Check2 text="Nộp danh sách đội trước ngày 15/05/2025. Sau thời hạn sẽ không được xét duyệt." />
+            <Warn text="Thành viên của một đội không được đăng ký thi đấu cho đội khác trong cùng giải." />
+            <Warn text="Ban tổ chức có quyền từ chối đội không đáp ứng đủ điều kiện tham dự." />
           </ul>
         </SectionCard>
 
@@ -136,26 +190,53 @@ export default function TheLePage() {
           </ul>
         </SectionCard>
 
-        {/* Awards */}
+        {/* Awards — full width */}
         <div className="md:col-span-2">
           <SectionCard icon={Award} title="Cơ cấu giải thưởng" color="#f59e0b">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-1">
-              {[
-                { place: "🥇 Vô địch", prize: "30.000.000đ", extra: "Cúp vàng + 4 vé tour", color: "#f59e0b", bg: "#fffbeb" },
-                { place: "🥈 Á quân", prize: "15.000.000đ", extra: "Cúp bạc + 2 vé tour", color: "#94a3b8", bg: "#f8fafc" },
-                { place: "🥉 Hạng 3", prize: "8.000.000đ", extra: "Cúp đồng + voucher", color: "#92400e", bg: "#fff7ed" },
-                { place: "🏅 Top 8", prize: "2.000.000đ", extra: "Huy chương + quà lưu niệm", color: "#1a56db", bg: "#eff6ff" },
-              ].map((item) => (
+            <div className="space-y-4">
+              <h3 className="text-center font-black text-slate-800 text-sm md:text-base leading-snug">
+                🏆 Cơ cấu giải thưởng NAM THANH &amp; PARTNERS PICKLEBALL CUP 2026
+              </h3>
+              <p className="text-slate-600 text-sm leading-relaxed text-center max-w-3xl mx-auto">
+                Nội dung đáng mong chờ nhất đây rồi! Cùng Nam Thanh Travel điểm danh những phần thưởng cực khủng đang chờ các tay vợt chinh phục tại giải đấu năm nay 🔥
+              </p>
+
+              <div className="grid md:grid-cols-3 gap-4 mt-2">
                 <div
-                  key={item.place}
-                  className="rounded-xl p-4 text-center"
-                  style={{ background: item.bg, border: `1.5px solid ${item.color}30` }}
+                  className="rounded-xl p-4 border"
+                  style={{ background: "#fffbeb", borderColor: "rgba(245,158,11,0.35)" }}
                 >
-                  <div className="text-2xl mb-2">{item.place.split(" ")[0]}</div>
-                  <div className="font-black text-base" style={{ color: item.color }}>{item.prize}</div>
-                  <div className="text-slate-500 text-xs mt-1">{item.extra}</div>
+                  <div className="text-2xl mb-2 text-center">🥇</div>
+                  <p className="font-black text-amber-800 text-sm text-center mb-2">2 GIẢI NHẤT</p>
+                  <p className="text-slate-700 text-sm leading-relaxed text-center">
+                    Mỗi giải <strong>4.000.000 VNĐ</strong> + 2 vé nội địa FOC + Quà tặng đặc biệt từ các hãng hàng không + Cúp lưu niệm
+                  </p>
                 </div>
-              ))}
+                <div
+                  className="rounded-xl p-4 border"
+                  style={{ background: "#f8fafc", borderColor: "rgba(148,163,184,0.35)" }}
+                >
+                  <div className="text-2xl mb-2 text-center">🥈</div>
+                  <p className="font-black text-slate-700 text-sm text-center mb-2">2 GIẢI NHÌ</p>
+                  <p className="text-slate-700 text-sm leading-relaxed text-center">
+                    Mỗi giải <strong>2.000.000 VNĐ</strong> + 2 vé nội địa FOC + Quà tặng đặc biệt từ các hãng hàng không + Cúp lưu niệm
+                  </p>
+                </div>
+                <div
+                  className="rounded-xl p-4 border md:col-span-1"
+                  style={{ background: "#fff7ed", borderColor: "rgba(234,88,12,0.3)" }}
+                >
+                  <div className="text-2xl mb-2 text-center">🥉</div>
+                  <p className="font-black text-amber-900 text-sm text-center mb-2">4 GIẢI BA</p>
+                  <p className="text-slate-700 text-sm leading-relaxed text-center">
+                    Mỗi giải <strong>1.000.000 VNĐ</strong> + Quà tặng đặc biệt từ nhà tài trợ + Cúp lưu niệm
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-slate-600 text-sm text-center leading-relaxed">
+                Cùng rất nhiều phần quà hấp dẫn khác từ Ban Tổ Chức và các nhà tài trợ đang chờ đón!
+              </p>
             </div>
 
             <div
@@ -173,7 +254,6 @@ export default function TheLePage() {
         </div>
       </div>
 
-      {/* Cta bottom */}
       <div
         className="mt-8 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4"
         style={{
@@ -186,22 +266,22 @@ export default function TheLePage() {
           <div className="text-sky-300/80 text-sm mt-1">Đăng ký đội tham dự trước ngày 15/05/2025</div>
         </div>
         <div className="flex gap-3">
-          <a
+          <Link
             href="/lien-he"
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
             style={{ background: "linear-gradient(90deg,#f59e0b,#ef4444)" }}
           >
             <Plane className="w-4 h-4" />
             Đăng ký ngay
-          </a>
-          <a
-            href="/"
+          </Link>
+          <Link
+            href="/giai-dau"
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-sky-200 transition-all"
             style={{ background: "rgba(14,165,233,0.15)", border: "1px solid rgba(14,165,233,0.3)" }}
           >
             <Trophy className="w-4 h-4" />
-            Xem bracket
-          </a>
+            Vào giải đấu
+          </Link>
         </div>
       </div>
     </PageLayout>

@@ -1,0 +1,647 @@
+{
+  "full_match_schedule": [
+    {
+      "stt": 1,
+      "time": "08:00",
+      "court": "Vip 16",
+      "category": "Đôi Nam",
+      "match": "A1 vs A2",
+      "players": "Hoàng Mai Đức Minh / Trần Huy Kiên vs Nguyễn Mạnh Quân / Lê Quang Minh"
+    },
+    {
+      "stt": 2,
+      "time": "08:00",
+      "court": "9",
+      "category": "Đôi Nam",
+      "match": "A3 vs A4",
+      "players": "Lê Đức Mạnh / Vương Tùng Lâm vs Đỗ Huy Linh / Nguyễn Ngọc Anh"
+    },
+    {
+      "stt": 3,
+      "time": "08:00",
+      "court": "10",
+      "category": "Đôi Nam",
+      "match": "B1 vs B2",
+      "players": "Đinh Ngọc Việt / Lê Ngọc Cảnh vs Đinh Minh Quân / Vũ Minh Đức"
+    },
+    {
+      "stt": 4,
+      "time": "08:00",
+      "court": "11",
+      "category": "Đôi Nam",
+      "match": "B3 vs B4",
+      "players": "Trần Duy Hưng / Nguyễn Trọng Nhật Anh vs Nguyễn Tiến Đạt / Vũ Duy Khánh (NT)"
+    },
+    {
+      "stt": 5,
+      "time": "08:00",
+      "court": "12",
+      "category": "Đôi Nam",
+      "match": "C1 vs C2",
+      "players": "Nguyễn Hoàng / Nguyễn Tuấn Anh vs Lê Hoàng Nam / Nguyễn Bá Quốc"
+    },
+    {
+      "stt": 6,
+      "time": "08:00",
+      "court": "13",
+      "category": "Đôi Nam",
+      "match": "C3 vs C4",
+      "players": "Lê Hoàng Tùng / Nguyễn Bá Trường vs Đỗ Đức Hoàng / Lê Trung Dũng"
+    },
+    {
+      "stt": 7,
+      "time": "08:00",
+      "court": "14",
+      "category": "Đôi Nam",
+      "match": "D1 vs D2",
+      "players": "Tường Duy Tùng / Nguyễn Tùng Dương vs Trần Trung Kiên / Nguyễn Phúc Hoàn"
+    },
+    {
+      "stt": 8,
+      "time": "08:00",
+      "court": "15",
+      "category": "Đôi Nam",
+      "match": "D3 vs D4",
+      "players": "Nguyễn Xuân Thiện / Nguyễn Anh Dũng vs Lù Tuấn Khoa / Lê Tuấn Nghĩa"
+    },
+    {
+      "stt": 9,
+      "time": "08:20",
+      "court": "Vip 16",
+      "category": "Đôi Nam Nữ",
+      "match": "A1 vs A2",
+      "players": "Phạm Duy Hiếu / Chu My vs Thiều Hữu Huân / Chu Thị Ánh Nguyệt"
+    },
+    {
+      "stt": 10,
+      "time": "08:20",
+      "court": "9",
+      "category": "Đôi Nam Nữ",
+      "match": "A3 vs A4",
+      "players": "Đức Hiền / Nguyễn Trang vs Vũ Duy Khánh (NT) / Đinh Bích Hòa"
+    },
+    {
+      "stt": 11,
+      "time": "08:20",
+      "court": "10",
+      "category": "Đôi Nam Nữ",
+      "match": "B1 vs B2",
+      "players": "Nguyễn Hữu Long / Nguyễn Thị Việt Hà vs Vũ Đình Tuấn / Nguyễn Thị Hoa"
+    },
+    {
+      "stt": 12,
+      "time": "08:20",
+      "court": "11",
+      "category": "Đôi Nam Nữ",
+      "match": "B3 vs B4",
+      "players": "Nguyễn Trần Quốc Đăng / Lều Gia Linh vs Đinh Trọng Phúc / Vũ Bích Ngọc"
+    },
+    {
+      "stt": 13,
+      "time": "08:20",
+      "court": "12",
+      "category": "Đôi Nam Nữ",
+      "match": "C1 vs C2",
+      "players": "Nguyễn Hoàng / Nguyễn Thu Hải vs Hoàng Khánh / CHENGSHAOHONG"
+    },
+    {
+      "stt": 14,
+      "time": "08:20",
+      "court": "13",
+      "category": "Đôi Nam Nữ",
+      "match": "C3 vs C4",
+      "players": "Đặng Quốc Khánh / Nguyễn Tố Quyên vs Nguyễn Thế Dũng / Nguyễn Diệu Anh"
+    },
+    {
+      "stt": 15,
+      "time": "08:20",
+      "court": "14",
+      "category": "Đôi Nam Nữ",
+      "match": "D1 vs D2",
+      "players": "Phùng Mạnh Linh / Nguyễn Thúy Tranh vs Trần Dũng Thành (NT) / Lê Khánh Linh"
+    },
+    {
+      "stt": 16,
+      "time": "08:20",
+      "court": "14",
+      "category": "Đôi Nam Nữ",
+      "match": "D3 vs D4",
+      "players": "Nguyễn Văn Minh / Trần Hương Giang vs Vũ Thịnh / Đoàn Duyên"
+    },
+    {
+      "stt": 17,
+      "time": "08:40",
+      "court": "Vip 16",
+      "category": "Đôi Nam",
+      "match": "A1 vs A3",
+      "players": "Hoàng Mai Đức Minh / Trần Huy Kiên vs Lê Đức Mạnh / Vương Tùng Lâm"
+    },
+    {
+      "stt": 18,
+      "time": "08:40",
+      "court": "9",
+      "category": "Đôi Nam",
+      "match": "A2 vs A4",
+      "players": "Nguyễn Mạnh Quân / Lê Quang Minh vs Đỗ Huy Linh / Nguyễn Ngọc Anh"
+    },
+    {
+      "stt": 21,
+      "time": "08:40",
+      "court": "12",
+      "category": "Đôi Nam",
+      "match": "E1 vs E2",
+      "players": "Phan Sỹ Việt Đức / Nguyễn Đức Phong vs Lê Xuân Việt / Lê Quang Huy"
+    },
+    {
+      "stt": 22,
+      "time": "08:40",
+      "court": "13",
+      "category": "Đôi Nam",
+      "match": "E3 vs E4",
+      "players": "Lê Minh Tuấn / Huỳnh Kim Tùng vs Bùi Đoàn Công / Nguyễn Phúc Thọ"
+    },
+    {
+      "stt": 23,
+      "time": "08:40",
+      "court": "14",
+      "category": "Đôi Nam",
+      "match": "F1 vs F2",
+      "players": "Phùng Mạnh Linh / Trần Ngọc Long vs Vũ Đức Anh / Lê Đăng Khoa"
+    },
+    {
+      "stt": 24,
+      "time": "08:40",
+      "court": "15",
+      "category": "Đôi Nam",
+      "match": "F3 vs F4",
+      "players": "Vũ Thành Trung / Nguyễn Hữu Cường vs Nguyễn Hữu Long / Hoàng Đức Long"
+    },
+    
+      {
+        "stt": 25,
+        "time": "09:00",
+        "court": "Vip 16",
+        "category": "Đôi Nam Nữ",
+        "match": "A1 vs A3",
+        "players": "Phạm Duy Hiếu / Chu My vs Đức Hiền / Nguyễn Trang"
+      },
+      {
+        "stt": 26,
+        "time": "09:00",
+        "court": "9",
+        "category": "Đôi Nam Nữ",
+        "match": "A2 vs A4",
+        "players": "Thiều Hữu Huân / Chu Thị Ánh Nguyệt vs Vũ Duy Khánh (NT) / Đinh Bích Hòa"
+      },
+      {
+        "stt": 27,
+        "time": "09:00",
+        "court": "10",
+        "category": "Đôi Nam Nữ",
+        "match": "B1 vs B3",
+        "players": "Nguyễn Hữu Long / Nguyễn Thị Việt Hà vs Nguyễn Trần Quốc Đăng / Lều Gia Linh"
+      },
+      {
+        "stt": 28,
+        "time": "09:00",
+        "court": "11",
+        "category": "Đôi Nam Nữ",
+        "match": "B2 vs B4",
+        "players": "Vũ Đình Tuấn / Nguyễn Thị Hoa vs Đinh Trọng Phúc / Vũ Bích Ngọc"
+      },
+      {
+        "stt": 29,
+        "time": "09:00",
+        "court": "12",
+        "category": "Đôi Nam Nữ",
+        "match": "C1 vs C3",
+        "players": "Nguyễn Hoàng / Nguyễn Thu Hải vs Đặng Quốc Khánh / Nguyễn Tố Quyên"
+      },
+      {
+        "stt": 30,
+        "time": "09:00",
+        "court": "13",
+        "category": "Đôi Nam Nữ",
+        "match": "C2 vs C4",
+        "players": "Hoàng Khánh / CHENGSHAOHONG vs Nguyễn Thế Dũng / Nguyễn Diệu Anh"
+      },
+      {
+        "stt": 31,
+        "time": "09:00",
+        "court": "14",
+        "category": "Đôi Nam Nữ",
+        "match": "D1 vs D3",
+        "players": "Phùng Mạnh Linh / Nguyễn Thúy Tranh vs Nguyễn Văn Minh / Trần Hương Giang"
+      },
+      {
+        "stt": 32,
+        "time": "09:00",
+        "court": "15",
+        "category": "Đôi Nam Nữ",
+        "match": "D2 vs D4",
+        "players": "Trần Dũng Thành (NT) / Lê Khánh Linh vs Vũ Thịnh / Đoàn Duyên"
+      },
+      {
+        "stt": 33,
+        "time": "09:20",
+        "court": "Vip 16",
+        "category": "Đôi Nam",
+        "match": "E1 vs E3",
+        "players": "Phan Sỹ Việt Đức / Nguyễn Đức Phong vs Lê Minh Tuấn / Huỳnh Kim Tùng"
+      },
+      {
+        "stt": 34,
+        "time": "09:20",
+        "court": "9",
+        "category": "Đôi Nam",
+        "match": "E2 vs E4",
+        "players": "Lê Xuân Việt / Lê Quang Huy vs Bùi Đoàn Công / Nguyễn Phúc Thọ"
+      },
+      {
+        "stt": 35,
+        "time": "09:20",
+        "court": "10",
+        "category": "Đôi Nam",
+        "match": "F1 vs F3",
+        "players": "Phùng Mạnh Linh / Trần Ngọc Long vs Vũ Thành Trung / Nguyễn Hữu Cường"
+      },
+      {
+        "stt": 36,
+        "time": "09:20",
+        "court": "11",
+        "category": "Đôi Nam",
+        "match": "F2 vs F4",
+        "players": "Vũ Đức Anh / Lê Đăng Khoa vs Nguyễn Hữu Long / Hoàng Đức Long"
+      },
+      {
+        "stt": 37,
+        "time": "09:20",
+        "court": "12",
+        "category": "Đôi Nam",
+        "match": "C1 vs C3",
+        "players": "Nguyễn Hoàng / Nguyễn Tuấn Anh vs Lê Hoàng Tùng / Nguyễn Bá Trường"
+      },
+      {
+        "stt": 38,
+        "time": "09:20",
+        "court": "13",
+        "category": "Đôi Nam",
+        "match": "C2 vs C4",
+        "players": "Lê Hoàng Nam / Nguyễn Bá Quốc vs Đỗ Đức Hoàng / Lê Trung Dũng"
+      },
+      {
+        "stt": 39,
+        "time": "09:20",
+        "court": "14",
+        "category": "Đôi Nam",
+        "match": "D1 vs D3",
+        "players": "Tường Duy Tùng / Nguyễn Tùng Dương vs Nguyễn Xuân Thiện / Nguyễn Anh Dũng"
+      },
+      {
+        "stt": 40,
+        "time": "09:20",
+        "court": "15",
+        "category": "Đôi Nam",
+        "match": "D2 vs D4",
+        "players": "Trần Trung Kiên / Nguyễn Phúc Hoàn vs Lù Tuấn Khoa / Lê Tuấn Nghĩa"
+      },
+      {
+        "stt": 41,
+        "time": "09:40",
+        "court": "Vip 16",
+        "category": "Đôi Nam Nữ",
+        "match": "A1 vs A4",
+        "players": "Phạm Duy Hiếu / Chu My vs Vũ Duy Khánh (NT) / Đinh Bích Hòa"
+      },
+      {
+        "stt": 42,
+        "time": "09:40",
+        "court": "9",
+        "category": "Đôi Nam Nữ",
+        "match": "A2 vs A3",
+        "players": "Thiều Hữu Huân / Chu Thị Ánh Nguyệt vs Đức Hiền / Nguyễn Trang"
+      },
+      {
+        "stt": 43,
+        "time": "09:40",
+        "court": "10",
+        "category": "Đôi Nam Nữ",
+        "match": "B1 vs B4",
+        "players": "Nguyễn Hữu Long / Nguyễn Thị Việt Hà vs Đinh Trọng Phúc / Vũ Bích Ngọc"
+      },
+      {
+        "stt": 44,
+        "time": "09:40",
+        "court": "11",
+        "category": "Đôi Nam Nữ",
+        "match": "B2 vs B3",
+        "players": "Vũ Đình Tuấn / Nguyễn Thị Hoa vs Nguyễn Trần Quốc Đăng / Lều Gia Linh"
+      },
+      {
+        "stt": 45,
+        "time": "09:40",
+        "court": "12",
+        "category": "Đôi Nam Nữ",
+        "match": "C1 vs C4",
+        "players": "Nguyễn Hoàng / Nguyễn Thu Hải vs Nguyễn Thế Dũng / Nguyễn Diệu Anh"
+      },
+      {
+        "stt": 46,
+        "time": "09:40",
+        "court": "13",
+        "category": "Đôi Nam Nữ",
+        "match": "C2 vs C3",
+        "players": "Hoàng Khánh / CHENGSHAOHONG vs Đặng Quốc Khánh / Nguyễn Tố Quyên"
+      },
+      {
+        "stt": 47,
+        "time": "09:40",
+        "court": "14",
+        "category": "Đôi Nam Nữ",
+        "match": "D1 vs D4",
+        "players": "Phùng Mạnh Linh / Nguyễn Thúy Tranh vs Vũ Thịnh / Đoàn Duyên"
+      },
+      {
+        "stt": 48,
+        "time": "09:40",
+        "court": "15",
+        "category": "Đôi Nam Nữ",
+        "match": "D2 vs D3",
+        "players": "Trần Dũng Thành (NT) / Lê Khánh Linh vs Nguyễn Văn Minh / Trần Hương Giang"
+      },
+      {
+        "stt": 49,
+        "time": "10:00",
+        "court": "Vip 16",
+        "category": "Đôi Nam",
+        "match": "A1 vs A4",
+        "players": "Hoàng Mai Đức Minh / Trần Huy Kiên vs Đỗ Huy Linh / Nguyễn Ngọc Anh"
+      },
+      {
+        "stt": 50,
+        "time": "10:00",
+        "court": "9",
+        "category": "Đôi Nam",
+        "match": "A2 vs A3",
+        "players": "Nguyễn Mạnh Quân / Lê Quang Minh vs Lê Đức Mạnh / Vương Tùng Lâm"
+      },
+      {
+        "stt": 51,
+        "time": "10:00",
+        "court": "10",
+        "category": "Đôi Nam",
+        "match": "B1 vs B4",
+        "players": "Đinh Ngọc Việt / Lê Ngọc Cảnh vs Nguyễn Tiến Đạt / Vũ Duy Khánh (NT)"
+      },
+      {
+        "stt": 52,
+        "time": "10:00",
+        "court": "11",
+        "category": "Đôi Nam",
+        "match": "B2 vs B3",
+        "players": "Đinh Minh Quân / Vũ Minh Đức vs Trần Duy Hưng / Nguyễn Trọng Nhật Anh"
+      },
+      {
+        "stt": 53,
+        "time": "10:00",
+        "court": "12",
+        "category": "Đôi Nam",
+        "match": "C1 vs C4",
+        "players": "Nguyễn Hoàng / Nguyễn Tuấn Anh vs Đỗ Đức Hoàng / Lê Trung Dũng"
+      },
+      {
+        "stt": 54,
+        "time": "10:00",
+        "court": "13",
+        "category": "Đôi Nam",
+        "match": "C2 vs C3",
+        "players": "Lê Hoàng Nam / Nguyễn Bá Quốc vs Lê Hoàng Tùng / Nguyễn Bá Trường"
+      },
+      {
+        "stt": 55,
+        "time": "10:00",
+        "court": "14",
+        "category": "Đôi Nam",
+        "match": "D1 vs D4",
+        "players": "Tường Duy Tùng / Nguyễn Tùng Dương vs Lù Tuấn Khoa / Lê Tuấn Nghĩa"
+      },
+      {
+        "stt": 56,
+        "time": "10:00",
+        "court": "15",
+        "category": "Đôi Nam",
+        "match": "D2 vs D3",
+        "players": "Trần Trung Kiên / Nguyễn Phúc Hoàn vs Nguyễn Xuân Thiện / Nguyễn Anh Dũng"
+      },
+      {
+        "stt": 57,
+        "time": "10:20",
+        "court": "Vip 16",
+        "category": "Đôi Nam",
+        "match": "E1 vs E4",
+        "players": "Phan Sỹ Việt Đức / Nguyễn Đức Phong vs Bùi Đoàn Công / Nguyễn Phúc Thọ"
+      },
+      {
+        "stt": 58,
+        "time": "10:20",
+        "court": "9",
+        "category": "Đôi Nam",
+        "match": "E2 vs E3",
+        "players": "Lê Xuân Việt / Lê Quang Huy vs Lê Minh Tuấn / Huỳnh Kim Tùng"
+      },
+      {
+        "stt": 59,
+        "time": "10:20",
+        "court": "10",
+        "category": "Đôi Nam",
+        "match": "F1 vs F4",
+        "players": "Phùng Mạnh Linh / Trần Ngọc Long vs Nguyễn Hữu Long / Hoàng Đức Long"
+      },
+      {
+        "stt": 60,
+        "time": "10:20",
+        "court": "11",
+        "category": "Đôi Nam",
+        "match": "F2 vs F3",
+        "players": "Vũ Đức Anh / Lê Đăng Khoa vs Vũ Thành Trung / Nguyễn Hữu Cường"
+      },
+      {
+        "stt": 61,
+        "time": "10:20",
+        "court": "12",
+        "category": "Đôi Nam Nữ",
+        "match": "Nhất A vs Nhì B",
+        "description": "Tứ kết 1 - Đôi Nam Nữ"
+      },
+      {
+        "stt": 62,
+        "time": "10:20",
+        "court": "13",
+        "category": "Đôi Nam Nữ",
+        "match": "Nhất B vs Nhì A",
+        "description": "Tứ kết 2 - Đôi Nam Nữ"
+      },
+      {
+        "stt": 63,
+        "time": "10:20",
+        "court": "14",
+        "category": "Đôi Nam Nữ",
+        "match": "Nhất C vs Nhì D",
+        "description": "Tứ kết 3 - Đôi Nam Nữ"
+      },
+      {
+        "stt": 64,
+        "time": "10:20",
+        "court": "15",
+        "category": "Đôi Nam Nữ",
+        "match": "Nhất D vs Nhì C",
+        "description": "Tứ kết 4 - Đôi Nam Nữ"
+      },
+      {
+        "stt": 65,
+        "time": "10:40",
+        "court": "Vip 16",
+        "category": "Đôi Nam",
+        "match": "Nhất A vs Nhì B",
+        "description": "Tứ kết 1 - Đôi Nam"
+      },
+      {
+        "stt": 66,
+        "time": "10:40",
+        "court": "9",
+        "category": "Đôi Nam",
+        "match": "Nhất B vs Nhì A",
+        "description": "Tứ kết 2 - Đôi Nam"
+      },
+      {
+        "stt": 67,
+        "time": "10:40",
+        "court": "10",
+        "category": "Đôi Nam",
+        "match": "Nhất C vs Nhì D",
+        "description": "Tứ kết 3 - Đôi Nam"
+      },
+      {
+        "stt": 68,
+        "time": "10:40",
+        "court": "11",
+        "category": "Đôi Nam",
+        "match": "Nhất D vs Nhì C",
+        "description": "Tứ kết 4 - Đôi Nam"
+      },
+      {
+        "stt": 69,
+        "time": "10:40",
+        "court": "12",
+        "category": "Đôi Nam",
+        "match": "Nhất E vs Ba 1",
+        "description": "Vòng 16/Tứ kết - Đôi Nam"
+      },
+      {
+        "stt": 70,
+        "time": "10:40",
+        "court": "13",
+        "category": "Đôi Nam",
+        "match": "Nhất F vs Ba 2",
+        "description": "Vòng 16/Tứ kết - Đôi Nam"
+      },
+      {
+        "stt": 71,
+        "time": "10:40",
+        "court": "14",
+        "category": "Đôi Nam",
+        "match": "Nhì E vs Ba 3",
+        "description": "Vòng 16/Tứ kết - Đôi Nam"
+      },
+      {
+        "stt": 72,
+        "time": "10:40",
+        "court": "15",
+        "category": "Đôi Nam",
+        "match": "Nhì F vs Ba 4",
+        "description": "Vòng 16/Tứ kết - Đôi Nam"
+      },
+      {
+        "stt": 73,
+        "time": "11:00",
+        "court": "Vip 16",
+        "category": "Đôi Nam Nữ",
+        "match": "Thắng TK1 vs Thắng TK2",
+        "description": "Bán kết 1 - Đôi Nam Nữ"
+      },
+      {
+        "stt": 74,
+        "time": "11:00",
+        "court": "9",
+        "category": "Đôi Nam Nữ",
+        "match": "Thắng TK3 vs Thắng TK4",
+        "description": "Bán kết 2 - Đôi Nam Nữ"
+      },
+      {
+        "stt": 75,
+        "time": "11:20",
+        "court": "Vip 16",
+        "category": "Đôi Nam",
+        "match": "Thắng Tr65 vs Thắng Tr66",
+        "description": "Bán kết 1 - Đôi Nam"
+      },
+      {
+        "stt": 76,
+        "time": "11:20",
+        "court": "9",
+        "category": "Đôi Nam",
+        "match": "Thắng Tr67 vs Thắng Tr68",
+        "description": "Bán kết 2 - Đôi Nam"
+      },
+      {
+        "stt": 77,
+        "time": "11:20",
+        "court": "10",
+        "category": "Đôi Nam",
+        "match": "Thắng Tr69 vs Thắng Tr70",
+        "description": "Bán kết 3 - Đôi Nam"
+      },
+      {
+        "stt": 78,
+        "time": "11:20",
+        "court": "11",
+        "category": "Đôi Nam",
+        "match": "Thắng Tr71 vs Thắng Tr72",
+        "description": "Bán kết 4 - Đôi Nam"
+      },
+      {
+        "stt": 79,
+        "time": "11:40",
+        "court": "Vip 16",
+        "category": "Đôi Nam Nữ",
+        "match": "Chung Kết",
+        "players": "Thắng BK1 vs Thắng BK2"
+      },
+      {
+        "stt": 80,
+        "time": "12:00",
+        "court": "9",
+        "category": "Đôi Nam",
+        "match": "Thắng Tr75 vs Thắng Tr76",
+        "description": "Bán kết chung cuộc 1"
+      },
+      {
+        "stt": 81,
+        "time": "12:00",
+        "court": "10",
+        "category": "Đôi Nam",
+        "match": "Thắng Tr77 vs Thắng Tr78",
+        "description": "Bán kết chung cuộc 2"
+      },
+      {
+        "stt": 82,
+        "time": "12:20",
+        "court": "Vip 16",
+        "category": "Đôi Nam",
+        "match": "Chung Kết",
+        "players": "Thắng Tr80 vs Thắng Tr81"
+      }
+      
+    
+  ]
+}

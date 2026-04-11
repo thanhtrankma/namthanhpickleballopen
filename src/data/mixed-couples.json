@@ -1,0 +1,124 @@
+{
+  "mixed_couples": {
+    "A": [
+      {
+        "id": "A1",
+        "company": "Nam Thanh Travel",
+        "pair_id": "Đôi 15",
+        "male": "Phạm Duy Hiếu",
+        "female": "Chu My"
+      },
+      {
+        "id": "A2",
+        "company": "Chu Thị Ánh Nguyệt",
+        "pair_id": "Đôi 1",
+        "male": "Thiều Hữu Huân",
+        "female": "Chu Thị Ánh Nguyệt"
+      },
+      {
+        "id": "A3",
+        "company": "World Sun Travel",
+        "pair_id": "Đôi 5",
+        "male": "Đức Hiền",
+        "female": "Nguyễn Trang"
+      },
+      {
+        "id": "A4",
+        "company": "Vietnam Airlines",
+        "pair_id": "Đôi 8",
+        "male": "Vũ Duy Khánh (NT)",
+        "female": "Đinh Bích Hòa"
+      }
+    ],
+    "B": [
+      {
+        "id": "B1",
+        "company": "Công ty TNHH Tập đoàn Hoàng Linh",
+        "pair_id": "Đôi 2",
+        "male": "Nguyễn Hữu Long",
+        "female": "Nguyễn Thị Việt Hà"
+      },
+      {
+        "id": "B2",
+        "company": "CN Lưu Ngọc Hưng",
+        "pair_id": "Đôi 6",
+        "male": "Vũ Đình Tuấn",
+        "female": "Nguyễn Thị Hoa"
+      },
+      {
+        "id": "B3",
+        "company": "EVA Air",
+        "pair_id": "Đôi 7",
+        "male": "Nguyễn Trần Quốc Đăng",
+        "female": "Lều Gia Linh"
+      },
+      {
+        "id": "B4",
+        "company": "VIETRAVEL",
+        "pair_id": "Đôi 10",
+        "male": "Đinh Trọng Phúc",
+        "female": "Vũ Bích Ngọc"
+      }
+    ],
+    "C": [
+      {
+        "id": "C1",
+        "company": "Đại lý Linh Anh Travel",
+        "pair_id": "Đôi 3",
+        "male": "Nguyễn Hoàng",
+        "female": "Nguyễn Thu Hải"
+      },
+      {
+        "id": "C2",
+        "company": "China Southern Airlines (CZ)",
+        "pair_id": "Đôi 12",
+        "male": "Hoàng Khánh",
+        "female": "CHENGSHAOHONG"
+      },
+      {
+        "id": "C3",
+        "company": "Cathay Pacific",
+        "pair_id": "Đôi 13",
+        "male": "Đặng Quốc Khánh",
+        "female": "Nguyễn Tố Quyên"
+      },
+      {
+        "id": "C4",
+        "company": "Emirates",
+        "pair_id": "Đôi 14",
+        "male": "Nguyễn Thế Dũng",
+        "female": "Nguyễn Diệu Anh"
+      }
+    ],
+    "D": [
+      {
+        "id": "D1",
+        "company": "Tràng An Travel",
+        "pair_id": "Đôi 4",
+        "male": "Phùng Mạnh Linh",
+        "female": "Nguyễn Thúy Tranh"
+      },
+      {
+        "id": "D2",
+        "company": "Vietnam Airlines",
+        "pair_id": "Đôi 9",
+        "male": "Trần Dũng Thành (NT)",
+        "female": "Lê Khánh Linh"
+      },
+      {
+        "id": "D3",
+        "company": "VIETRAVEL",
+        "pair_id": "Đôi 11",
+        "male": "Nguyễn Văn Minh",
+        "female": "Trần Hương Giang"
+      },
+      {
+        "id": "D4",
+        "company": "CÔNG TY CỔ PHẦN THƯƠNG MẠI VÀ DU LỊCH NGỌC THIÊN HÀ",
+        "pair_id": "Đôi 16",
+        "male": "Vũ Thịnh",
+        "female": "Đoàn Duyên"
+      }
+    ]
+  }
+}

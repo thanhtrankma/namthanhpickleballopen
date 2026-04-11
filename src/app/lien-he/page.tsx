@@ -415,7 +415,7 @@ export default function LienHePage() {
                 <Plane className="w-4 h-4 text-orange-400" />
                 <span className="font-black text-white text-sm">Nam Thanh Travel</span>
               </div>
-              <p className="text-sky-300/80 text-xs">Ban tổ chức · Giải đấu 2025</p>
+              <p className="text-sky-300/80 text-xs">Ban tổ chức · Giải đấu 2026</p>
             </div>
             <div className="p-4 space-y-3">
               <ContactCard icon={Phone}   label="Hotline"   value="0365614597" href="tel:0365614597"   color="#ef4444" />
@@ -451,7 +451,7 @@ export default function LienHePage() {
           </div>
 
           {/* Ad sidebar */}
-          <AdBanner variant="sidebar" />
+          {/* <AdBanner variant="sidebar" /> */}
         </div>
       </div>
 
@@ -488,7 +488,7 @@ export default function LienHePage() {
       </div>
 
       {/* Bottom CTA */}
-      <AdBanner variant="strip" />
+      {/* <AdBanner variant="strip" /> */}
 
       {/* Partnerships CTA */}
       <div

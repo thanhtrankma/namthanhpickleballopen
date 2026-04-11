@@ -25,7 +25,7 @@ export default function PageLayout({ title, subtitle, children }: PageLayoutProp
           <div className="flex items-center justify-center gap-2 mb-2">
             <div className="h-px w-12 bg-sky-400/40" />
             <span className="text-[10px] font-bold text-sky-400 tracking-[0.2em] uppercase">
-              Nam Thanh Travel Open
+              NAM THANH & PARTNERS PICKLEBALL CUP 2026
             </span>
             <div className="h-px w-12 bg-sky-400/40" />
           </div>

@@ -1,5 +1,5 @@
-import BracketStage from "@/components/BracketStage";
+import HomeLanding from "@/components/HomeLanding";
 
 export default function Home() {
-  return <BracketStage />;
+  return <HomeLanding />;
 }

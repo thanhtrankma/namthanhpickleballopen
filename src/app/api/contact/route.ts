@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
   };
 
   const lines: string[] = [
-    `🏆 <b>NAM THANH TRAVEL OPEN — Liên hệ mới!</b>`,
+    `🏆 <b>NAM THANH & PARTNERS PICKLEBALL CUP 2026 — Liên hệ mới!</b>`,
     ``,
     `👤 <b>Họ tên:</b> ${h(name)}`,
     `📱 <b>Điện thoại:</b> ${h(phone)}`,

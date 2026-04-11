@@ -1,0 +1,160 @@
+{
+  "male_couples": {
+    "A": [
+      {
+        "id": "A1",
+        "company": "Nam Thanh Travel",
+        "pair_id": "Đôi 23",
+        "members": ["Hoàng Mai Đức Minh", "Trần Huy Kiên"]
+      },
+      {
+        "id": "A2",
+        "company": "HOMEY TOURIST",
+        "pair_id": "Đôi 1",
+        "members": ["Nguyễn Mạnh Quân", "Lê Quang Minh"]
+      },
+      {
+        "id": "A3",
+        "company": "THÁI THIÊN AN TRAVEL",
+        "pair_id": "Đôi 3",
+        "members": ["Lê Đức Mạnh", "Vương Tùng Lâm"]
+      },
+      {
+        "id": "A4",
+        "company": "VIETRAVEL",
+        "pair_id": "Đôi 18",
+        "members": ["Đỗ Huy Linh", "Nguyễn Ngọc Anh"]
+      }
+    ],
+    "B": [
+      {
+        "id": "B1",
+        "company": "Chu Thị Ánh Nguyệt",
+        "pair_id": "Đôi 5",
+        "members": ["Đinh Ngọc Việt", "Lê Ngọc Cảnh"]
+      },
+      {
+        "id": "B2",
+        "company": "Công ty TNHH Du lịch Authentic Asia",
+        "pair_id": "Đôi 6",
+        "members": ["Đinh Minh Quân", "Vũ Minh Đức"]
+      },
+      {
+        "id": "B3",
+        "company": "Tràng An Travel",
+        "pair_id": "Đôi 9",
+        "members": ["Trần Duy Hưng", "Nguyễn Trọng Nhật Anh"]
+      },
+      {
+        "id": "B4",
+        "company": "Etrip",
+        "pair_id": "Đôi 19",
+        "members": ["Nguyễn Tiến Đạt", "Vũ Duy Khánh (NT)"]
+      }
+    ],
+    "C": [
+      {
+        "id": "C1",
+        "company": "Đại lý Linh Anh Travel",
+        "pair_id": "Đôi 8",
+        "members": ["Nguyễn Hoàng", "Nguyễn Tuấn Anh"]
+      },
+      {
+        "id": "C2",
+        "company": "CÔNG TY QAT VIỆT NAM",
+        "pair_id": "Đôi 11",
+        "members": ["Lê Hoàng Nam", "Nguyễn Bá Quốc"]
+      },
+      {
+        "id": "C3",
+        "company": "Blue Dragon",
+        "pair_id": "Đôi 14",
+        "members": ["Lê Hoàng Tùng", "Nguyễn Bá Trường"]
+      },
+      {
+        "id": "C4",
+        "company": "Etrip",
+        "pair_id": "Đôi 21",
+        "members": ["Đỗ Đức Hoàng", "Lê Trung Dũng"]
+      }
+    ],
+    "D": [
+      {
+        "id": "D1",
+        "company": "HOMEY TOURIST",
+        "pair_id": "Đôi 2",
+        "members": ["Tường Duy Tùng", "Nguyễn Tùng Dương"]
+      },
+      {
+        "id": "D2",
+        "company": "Green Tours",
+        "pair_id": "Đôi 12",
+        "members": ["Trần Trung Kiên", "Nguyễn Phúc Hoàn"]
+      },
+      {
+        "id": "D3",
+        "company": "Công ty Cổ phần Kỹ thuật Công Nghiệp Á Châu ( ACIT )",
+        "pair_id": "Đôi 15",
+        "members": ["Nguyễn Xuân Thiện", "Nguyễn Anh Dũng"]
+      },
+      {
+        "id": "D4",
+        "company": "Sabre",
+        "pair_id": "Đôi 22",
+        "members": ["Lù Tuấn Khoa", "Lê Tuấn Nghĩa"]
+      }
+    ],
+    "E": [
+      {
+        "id": "E1",
+        "company": "Công ty TNHH Du lịch Authentic Asia",
+        "pair_id": "Đôi 7",
+        "members": ["Phan Sỹ Việt Đức", "Nguyễn Đức Phong"]
+      },
+      {
+        "id": "E2",
+        "company": "THÁI THIÊN AN TRAVEL",
+        "pair_id": "Đôi 4",
+        "members": ["Lê Xuân Việt", "Lê Quang Huy"]
+      },
+      {
+        "id": "E3",
+        "company": "SVietnam Travel",
+        "pair_id": "Đôi 16",
+        "members": ["Lê Minh Tuấn", "Huỳnh Kim Tùng"]
+      },
+      {
+        "id": "E4",
+        "company": "Blue Dragon",
+        "pair_id": "Đôi 20",
+        "members": ["Bùi Đoàn Công", "Nguyễn Phúc Thọ"]
+      }
+    ],
+    "F": [
+      {
+        "id": "F1",
+        "company": "Tràng An Travel",
+        "pair_id": "Đôi 10",
+        "members": ["Phùng Mạnh Linh", "Trần Ngọc Long"]
+      },
+      {
+        "id": "F2",
+        "company": "Công ty ô tô Tân Phú",
+        "pair_id": "Đôi 13",
+        "members": ["Vũ Đức Anh", "Lê Đăng Khoa"]
+      },
+      {
+        "id": "F3",
+        "company": "CN Lưu Ngọc Hưng",
+        "pair_id": "Đôi 17",
+        "members": ["Vũ Thành Trung", "Nguyễn Hữu Cường"]
+      },
+      {
+        "id": "F4",
+        "company": "Công ty TNHH Tập đoàn Hoàng Linh",
+        "pair_id": "Đôi 24",
+        "members": ["Nguyễn Hữu Long", "Hoàng Đức Long"]
+      }
+    ]
+  }
+}

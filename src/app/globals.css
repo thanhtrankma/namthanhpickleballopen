@@ -2,20 +2,21 @@
 @import "tailwindcss";
 
 :root {
-  --background: #e8f4fd;
-  --foreground: #0f2a50;
+  --background: #fff7ed;
+  --foreground: #431407;
 
-  /* Nam Thanh Travel Brand Colors */
-  --nt-navy:   #0f2a50;
-  --nt-blue:   #1d4ed8;
-  --nt-teal:   #0891b2;
-  --nt-sky:    #38bdf8;
-  --nt-orange: #f97316;
-  --nt-gold:   #f59e0b;
+  /* Brand — tông cam/vàng theo banner giải */
+  --nt-navy:   #431407;
+  --nt-blue:   #ea580c;
+  --nt-teal:   #f97316;
+  --nt-sky:    #fb923c;
+  --nt-orange: #ea580c;
+  --nt-gold:   #fbbf24;
+  --nt-amber:  #f59e0b;
 }
 
 body {
-  background: linear-gradient(145deg, #dbeafe 0%, #e0f2fe 40%, #cffafe 100%);
+  background: linear-gradient(145deg, #fff7ed 0%, #ffedd5 35%, #fed7aa 100%);
   color: var(--foreground);
   font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
   min-height: 100vh;
@@ -31,13 +32,13 @@ body {
   width: 7px;
 }
 ::-webkit-scrollbar-track {
-  background: #bfdbfe;
+  background: #ffedd5;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(90deg, #0891b2, #1d4ed8);
+  background: linear-gradient(90deg, #ea580c, #f59e0b);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(90deg, #0e7490, #1e40af);
+  background: linear-gradient(90deg, #c2410c, #ea580c);
 }
