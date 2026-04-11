@@ -146,7 +146,7 @@ export default function TheLePage() {
         </SectionCard>
 
         {/* Eligibility */}
-        <SectionCard icon={Users} title="Điều kiện tham gia" color="#0ea5e9">
+        {/* <SectionCard icon={Users} title="Điều kiện tham gia" color="#0ea5e9">
           <ul className="space-y-0">
             <Check2 text="Đội có từ 5 đến 11 thành viên chính thức. Được đăng ký tối đa 3 dự bị." />
             <Check2 text="Thành viên đủ 18 tuổi trở lên. Xuất trình CMND/CCCD khi đăng ký." />
@@ -156,10 +156,10 @@ export default function TheLePage() {
             <Warn text="Thành viên của một đội không được đăng ký thi đấu cho đội khác trong cùng giải." />
             <Warn text="Ban tổ chức có quyền từ chối đội không đáp ứng đủ điều kiện tham dự." />
           </ul>
-        </SectionCard>
+        </SectionCard> */}
 
         {/* Schedule */}
-        <SectionCard icon={Clock} title="Lịch thi đấu & Thời gian" color="#8b5cf6">
+        {/* <SectionCard icon={Clock} title="Lịch thi đấu & Thời gian" color="#8b5cf6">
           <div className="space-y-3">
             {[
               { date: "01/06/2025", event: "Khai mạc & Bốc thăm", badge: "bg-purple-100 text-purple-700" },
@@ -177,7 +177,7 @@ export default function TheLePage() {
               </div>
             ))}
           </div>
-        </SectionCard>
+        </SectionCard> */}
 
         {/* Rules */}
         <SectionCard icon={Shield} title="Quy định trong thi đấu" color="#ef4444">
