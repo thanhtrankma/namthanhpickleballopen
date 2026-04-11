@@ -93,8 +93,8 @@ export default function SiteNav() {
             boxShadow: "0 2px 8px rgba(245,158,11,0.35)",
           }}
         >
-          <Trophy className="w-3.5 h-3.5" />
-          Đăng ký thi đấu
+          <Phone className="w-3.5 h-3.5" />
+          Liên hệ
         </a>
 
         {/* Mobile hamburger */}
