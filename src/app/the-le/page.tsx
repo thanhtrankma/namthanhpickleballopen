@@ -239,7 +239,7 @@ export default function TheLePage() {
               </p>
             </div>
 
-            <div
+            {/* <div
               className="mt-4 p-3 rounded-xl flex items-start gap-2"
               style={{ background: "#eff6ff", border: "1px solid #bfdbfe" }}
             >
@@ -249,7 +249,7 @@ export default function TheLePage() {
                 2 người tới Đà Nẵng hoặc Phú Quốc — được lựa chọn theo ý thích.
                 Các cầu thủ xuất sắc của giải nhận voucher du lịch trị giá 500.000đ mỗi người.
               </p>
-            </div>
+            </div> */}
           </SectionCard>
         </div>
       </div>
@@ -263,7 +263,6 @@ export default function TheLePage() {
       >
         <div className="text-center md:text-left">
           <div className="text-white font-black text-lg">Sẵn sàng tham chiến?</div>
-          <div className="text-sky-300/80 text-sm mt-1">Đăng ký đội tham dự trước ngày 15/05/2025</div>
         </div>
         <div className="flex gap-3">
           <Link
@@ -272,7 +271,7 @@ export default function TheLePage() {
             style={{ background: "linear-gradient(90deg,#f59e0b,#ef4444)" }}
           >
             <Plane className="w-4 h-4" />
-            Đăng ký ngay
+            Liên hệ ngay
           </Link>
           <Link
             href="/giai-dau"
