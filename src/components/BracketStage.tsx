@@ -544,24 +544,31 @@ function MixedCouplesTables() {
               Bảng {L} — Đôi Nam Nữ
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs min-w-[640px]">
+              <table className="w-full table-fixed border-collapse text-left text-xs min-w-[640px]">
+                <colgroup>
+                  <col style={{ width: "8%" }} />
+                  <col style={{ width: "34%" }} />
+                  <col style={{ width: "10%" }} />
+                  <col style={{ width: "24%" }} />
+                  <col style={{ width: "24%" }} />
+                </colgroup>
                 <thead>
                   <tr className="border-b border-slate-700/80" style={{ background: "#0c1525" }}>
-                    <th className="px-3 py-2 font-black uppercase tracking-wider text-slate-500 w-12">Mã</th>
-                    <th className="px-3 py-2 font-black uppercase tracking-wider text-slate-500">Công ty / Đơn vị</th>
-                    <th className="px-3 py-2 font-black uppercase tracking-wider text-slate-500 w-16">Đôi</th>
-                    <th className="px-3 py-2 font-black uppercase tracking-wider text-slate-500">VĐV Nam</th>
-                    <th className="px-3 py-2 font-black uppercase tracking-wider text-slate-500">VĐV Nữ</th>
+                    <th className="px-3 py-2.5 font-black uppercase tracking-wider text-slate-500 align-top">Mã</th>
+                    <th className="px-3 py-2.5 font-black uppercase tracking-wider text-slate-500 align-top">Công ty / Đơn vị</th>
+                    <th className="px-3 py-2.5 font-black uppercase tracking-wider text-slate-500 align-top">Đôi</th>
+                    <th className="px-3 py-2.5 font-black uppercase tracking-wider text-slate-500 align-top">VĐV Nam</th>
+                    <th className="px-3 py-2.5 font-black uppercase tracking-wider text-slate-500 align-top">VĐV Nữ</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((r) => (
                     <tr key={r.id} className="border-t border-slate-800/90 hover:bg-slate-800/40">
-                      <td className="px-3 py-2 font-mono font-bold text-sky-400 whitespace-nowrap">{r.id}</td>
-                      <td className="px-3 py-2 text-slate-300 max-w-[220px]">{r.company}</td>
-                      <td className="px-3 py-2 text-amber-400/90 whitespace-nowrap">{r.pair_id}</td>
-                      <td className="px-3 py-2 text-slate-200">{r.male}</td>
-                      <td className="px-3 py-2 text-slate-200">{r.female}</td>
+                      <td className="px-3 py-2 align-top font-mono font-bold text-sky-400 whitespace-nowrap">{r.id}</td>
+                      <td className="px-3 py-2 align-top text-slate-300 min-w-0 break-words">{r.company}</td>
+                      <td className="px-3 py-2 align-top text-amber-400/90 whitespace-nowrap">{r.pair_id}</td>
+                      <td className="px-3 py-2 align-top text-slate-200 break-words">{r.male}</td>
+                      <td className="px-3 py-2 align-top text-slate-200 break-words">{r.female}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -600,25 +607,30 @@ function MaleCouplesRosterTables() {
               Bảng {L} — Đôi Nam
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs min-w-[560px]">
+              <table className="w-full table-fixed border-collapse text-left text-xs min-w-[560px]">
+                <colgroup>
+                  <col style={{ width: "10%" }} />
+                  <col style={{ width: "38%" }} />
+                  <col style={{ width: "12%" }} />
+                  <col style={{ width: "40%" }} />
+                </colgroup>
                 <thead>
                   <tr className="border-b border-slate-700/80" style={{ background: "#0c1525" }}>
-                    <th className="px-3 py-2 font-black uppercase tracking-wider text-slate-500 w-12">Mã</th>
-                    <th className="px-3 py-2 font-black uppercase tracking-wider text-slate-500">Công ty / Đơn vị</th>
-                    <th className="px-3 py-2 font-black uppercase tracking-wider text-slate-500 w-16">Đôi</th>
-                    <th className="px-3 py-2 font-black uppercase tracking-wider text-slate-500">Vận động viên</th>
+                    <th className="px-3 py-2.5 font-black uppercase tracking-wider text-slate-500 align-top">Mã</th>
+                    <th className="px-3 py-2.5 font-black uppercase tracking-wider text-slate-500 align-top">Công ty / Đơn vị</th>
+                    <th className="px-3 py-2.5 font-black uppercase tracking-wider text-slate-500 align-top">Đôi</th>
+                    <th className="px-3 py-2.5 font-black uppercase tracking-wider text-slate-500 align-top">Vận động viên</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((r) => (
                     <tr key={r.id} className="border-t border-slate-800/90 hover:bg-slate-800/40">
-                      <td className="px-3 py-2 font-mono font-bold text-sky-400 whitespace-nowrap">{r.id}</td>
-                      <td className="px-3 py-2 text-slate-300 max-w-[240px]">{r.company}</td>
-                      <td className="px-3 py-2 text-amber-400/90 whitespace-nowrap">{r.pair_id}</td>
-                      <td className="px-3 py-2 text-slate-200">
-                        {r.members[0]}
-                        <span className="text-slate-500 mx-1">·</span>
-                        {r.members[1]}
+                      <td className="px-3 py-2 align-top font-mono font-bold text-sky-400 whitespace-nowrap">{r.id}</td>
+                      <td className="px-3 py-2 align-top text-slate-300 min-w-0 break-words">{r.company}</td>
+                      <td className="px-3 py-2 align-top text-amber-400/90 whitespace-nowrap">{r.pair_id}</td>
+                      <td className="px-3 py-2 align-top text-slate-200">
+                        <span className="block leading-snug">{r.members[0]}</span>
+                        <span className="mt-1 block text-[11px] leading-snug text-slate-300/95">{r.members[1]}</span>
                       </td>
                     </tr>
                   ))}
