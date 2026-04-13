@@ -96,10 +96,10 @@ export default function TheLePage() {
             Giải đấu: <span className="text-slate-800">NAM THANH & PARTNERS PICKLEBALL CUP 2026</span>
           </p>
           <SubHeading>Số lượng tham dự</SubHeading>
-          <RuleLine>16 cặp thi đấu.</RuleLine>
+          <RuleLine>20 cặp thi đấu.</RuleLine>
           <SubHeading>Vòng bảng</SubHeading>
           <ul className="list-disc pl-5 space-y-1.5 text-slate-700 text-sm">
-            <li>16 đội chia thành 4 bảng (mỗi bảng 4 đội).</li>
+            <li>20 đội chia thành 4 bảng (mỗi bảng 5 đội).</li>
             <li>Thi đấu vòng tròn tính điểm.</li>
             <li>
               Cách tính điểm: <strong>Thắng: 1 điểm</strong> — <strong>Thua: 0 điểm</strong>.
@@ -115,6 +115,10 @@ export default function TheLePage() {
           <RuleLine>
             Vòng Tứ kết, Bán kết, Chung kết thi đấu <strong>loại trực tiếp</strong>.
           </RuleLine>
+          <SubHeading>Trận Bán kết</SubHeading>
+          <RuleLine>Thi đấu 11 điểm, cách 2, tối đa 13 điểm kết thúc.</RuleLine>
+          <SubHeading>Trận Chung kết</SubHeading>
+          <RuleLine>Thi đấu 15 điểm, tối đa 17 điểm kết thúc.</RuleLine>
         </SectionCard>
 
         {/* Đôi Nam */}
@@ -134,7 +138,7 @@ export default function TheLePage() {
             <li>Mỗi trận thi đấu chạm 11 điểm.</li>
             <li>Nếu 2 đội bằng điểm: xét thành tích đối đầu trực tiếp.</li>
           </ul>
-          <SubHeading>Vé vào vòng Tứ kết</SubHeading>
+          <SubHeading>Vé vào vòng knock-out</SubHeading>
           <RuleLine>
             2 đội <strong>Nhất</strong> &amp; <strong>Nhì</strong> mỗi bảng +{" "}
             <strong>4 đội hạng 3</strong> có thành tích tốt nhất.
@@ -143,6 +147,10 @@ export default function TheLePage() {
           <RuleLine>
             Từ vòng 1/8 thi đấu loại trực tiếp đến Chung kết.
           </RuleLine>
+          <SubHeading>Trận Bán kết</SubHeading>
+          <RuleLine>Thi đấu 11 điểm, cách 2, tối đa 13 điểm kết thúc.</RuleLine>
+          <SubHeading>Trận Chung kết</SubHeading>
+          <RuleLine>Thi đấu 15 điểm, tối đa 17 điểm kết thúc.</RuleLine>
         </SectionCard>
 
         {/* Eligibility */}
