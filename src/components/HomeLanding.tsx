@@ -3,19 +3,19 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Calendar, Heart, MapPin, Trophy, Users, Zap } from "lucide-react";
 
+const SPONSOR_LOGOS = [
+  { src: "/VNA.png", alt: "Vietnam Airlines" },
+  { src: "/VJ.png", alt: "Vietjet Air" },
+  { src: "/SABRE.png", alt: "Sabre Vietnam" },
+  { src: "/EMIRATES.png", alt: "Emirates" },
+  { src: "/EVA.png", alt: "EVA Air" },
+];
+
 export default function HomeLanding() {
   return (
     <div className="relative min-h-[calc(100dvh-3rem)] overflow-hidden">
       {/* Background banner */}
       <div className="absolute inset-0">
-        {/* <Image
-          src="/banner.jpg"
-          alt="NAM THANH & PARTNERS PICKLEBALL CUP"
-          fill
-          priority
-          className="object-cover object-center"
-          sizes="100vw"
-        /> */}
         <div
           className="absolute inset-0"
           style={{
@@ -38,7 +38,7 @@ export default function HomeLanding() {
         aria-hidden
       />
 
-      <div className="relative z-10 max-w-4xl mx-auto px-4 pt-8 pb-28 md:pb-24 md:pt-12 flex flex-col items-center text-center">
+      <div className="relative z-10 max-w-4xl mx-auto px-4 pt-8 pb-28 md:pb-24 md:pt-6 flex flex-col items-center text-center text-shadow-lg">
         <div className="mb-6 flex flex-col items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -46,9 +46,9 @@ export default function HomeLanding() {
             alt="Nam Thanh Travel"
             className="h-14 md:h-16 w-auto object-contain drop-shadow-lg"
           />
-          <p className="text-[10px] md:text-xs font-bold tracking-[0.2em] text-amber-100/90 uppercase">
+          {/* <p className="text-[10px] md:text-xs font-bold tracking-[0.2em] text-amber-100/90 uppercase">
             Nam Thanh Travel
-          </p>
+          </p> */}
         </div>
 
         <h1
@@ -123,6 +123,45 @@ export default function HomeLanding() {
               </p>
             </InfoCard>
           </div>
+
+          <section
+            className="mt-8 rounded-2xl border border-white/20 p-4 md:p-6 backdrop-blur-md"
+            style={{
+              background: "linear-gradient(145deg, rgba(234,88,12,0.3) 0%, rgba(124,45,18,0.42) 100%)",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.12)",
+            }}
+          >
+            <h2 className="text-center text-base font-black uppercase tracking-wider text-amber-100/95 mb-4">
+              Tri ân nhà tài trợ
+            </h2>
+
+            <p className="text-sm md:text-base leading-relaxed text-white/95 text-center">
+              🧡 Nam Thanh Travel xin trân trọng gửi lời cảm ơn sâu sắc tới các Nhà Tài Trợ: Vietnam Airlines, Vietjet Air,
+              Sabre Vietnam, Emirates và EVA Air đã tin tưởng đồng hành và góp phần tạo nên
+              thành công cho Nam Thanh &amp; Partners Pickleball Cup 2026.
+            </p>
+            <p className="mt-3 text-sm md:text-base leading-relaxed text-white/95">
+              Sự hỗ trợ quý báu từ Quý Đối tác không chỉ mang đến những giá trị thiết thực cho giải đấu mà còn
+              góp phần lan tỏa tinh thần thể thao, kết nối cộng đồng và nâng tầm chất lượng sự kiện năm nay. 🤝
+            </p>
+
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5  justify-center">
+              {SPONSOR_LOGOS.map((sponsor) => (
+                <div
+                  key={sponsor.src}
+                  className="overflow-hidden rounded-xl border border-amber-200/40 bg-white/90 shadow-[0_6px_18px_rgba(0,0,0,0.14)]"
+                >
+                  <Image
+                    src={sponsor.src}
+                    alt={sponsor.alt}
+                    width={1024}
+                    height={354}
+                    className="h-auto w-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
         </div>
       </div>
 
