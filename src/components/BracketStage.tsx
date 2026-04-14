@@ -533,7 +533,7 @@ function MixedCouplesTables() {
   const groups = mixedCouplesJson.mixed_couples;
   const letters = ["A", "B", "C", "D"] as const;
   return (
-    <div className="flex flex-row gap-4 w-full grid grid-cols-2 gap-4">
+    <div className="flex flex-row gap-4 w-full grid xl:grid-cols-2 xs:grid-cols-1 gap-4">
       {letters.map((L) => {
         const rows = groups[L];
         const color = GROUP_COLORS[letters.indexOf(L)] ?? "#3b82f6";
@@ -594,7 +594,7 @@ function MixedCouplesTables() {
 function MaleCouplesRosterTables() {
   const groups = maleCouplesJson.male_couples;
   return (
-    <div className="flex flex-row gap-4 w-full grid grid-cols-3 gap-4">
+    <div className="flex flex-row gap-4 w-full grid xl:grid-cols-3 xs:grid-cols-1 gap-4">
       {MALE_GROUP_LETTERS.map((L) => {
         const rows = groups[L];
         const color = GROUP_COLORS[MALE_GROUP_LETTERS.indexOf(L)] ?? "#3b82f6";
