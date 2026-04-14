@@ -6,15 +6,16 @@ import {
   Phone, Globe, Facebook, Star, ChevronUp,
   Users, Calendar, Heart, ClipboardList, LayoutGrid,
 } from "lucide-react";
-import AdBanner from "@/components/AdBanner";
 import maleCouplesJson from "@/data/male-couples.json";
 import mixedCouplesJson from "@/data/mixed-couples.json";
 import matchScheduleJson from "@/data/match_schedule.json";
 import {
   createWinnerLookup,
+  findGroup,
+  findRRMatch,
   getDisplaySides,
-  needsKoScoreInput,
   normalizeBracketCategory,
+  parseRRMatchString,
   sortedThirdPlacesDetailed,
   type KoScores,
 } from "@/lib/scheduleResolve";
@@ -47,9 +48,46 @@ type TournamentData = Group[];
 
 const STORAGE_KEY = "tournament_male_v2";
 const STORAGE_KEY_MIXED = "tournament_mixed_v2";
-const SCHEDULE_KO_KEY = "schedule_ko_v1";
+const SCHEDULE_ROWS_KEY = "schedule_rows_v2";
+const LIVE_SCHEDULE_URL = "/api/live-schedule";
 const MALE_GROUP_LETTERS = ["A", "B", "C", "D", "E", "F"] as const;
 const MIXED_GROUP_LETTERS = ["A", "B", "C", "D"] as const;
+
+interface ScheduleRow {
+  stt: number;
+  time: string;
+  court: string | number;
+  category: string;
+  match: string;
+  players?: string;
+  score_team1?: string | number;
+  score_team2?: string | number;
+  status?: string;
+}
+
+function toScoreString(v: string | number | null | undefined): string {
+  if (v === null || v === undefined) return "";
+  const s = String(v).trim();
+  if (!/^\d+$/.test(s)) return "";
+  return s;
+}
+
+function normalizeScheduleRows(rows: ScheduleRow[]): ScheduleRow[] {
+  return rows
+    .map((r) => ({
+      ...r,
+      time: String(r.time ?? ""),
+      court: r.court ?? "",
+      score_team1: toScoreString(r.score_team1),
+      score_team2: toScoreString(r.score_team2),
+      status: r.status ?? "",
+    }))
+    .sort((a, b) => a.stt - b.stt);
+}
+
+const DEFAULT_SCHEDULE_ROWS = normalizeScheduleRows(
+  matchScheduleJson.full_match_schedule as ScheduleRow[]
+);
 
 /** Vòng tròn: tất cả cặp (i,j) với i < j — ví dụ 4 đội → 6 trận, 5 đội → 10 trận */
 function rrPairsForTeamCount(teamCount: number): [number, number][] {
@@ -113,6 +151,38 @@ function buildMixedTournamentFromJson(): TournamentData {
       })),
     };
   });
+}
+
+function applyRoundRobinScoresFromSchedule(
+  baseMale: TournamentData,
+  baseMixed: TournamentData,
+  scheduleRows: ScheduleRow[]
+): { maleData: TournamentData; mixedData: TournamentData } {
+  const maleData = baseMale.map((g) => ({
+    ...g,
+    teams: g.teams.map((t) => ({ ...t })),
+    matches: g.matches.map((m) => ({ ...m })),
+  }));
+  const mixedData = baseMixed.map((g) => ({
+    ...g,
+    teams: g.teams.map((t) => ({ ...t })),
+    matches: g.matches.map((m) => ({ ...m })),
+  }));
+
+  for (const row of scheduleRows) {
+    const cat = normalizeBracketCategory(row.category);
+    const rr = parseRRMatchString(row.match, cat);
+    if (!rr) continue;
+    const targetData = cat === "Đôi Nam" ? maleData : mixedData;
+    const group = findGroup(targetData, rr.letter);
+    if (!group) continue;
+    const gm = findRRMatch(group, rr.id1, rr.id2);
+    if (!gm) continue;
+    gm.score1 = toScoreString(row.score_team1);
+    gm.score2 = toScoreString(row.score_team2);
+  }
+
+  return { maleData, mixedData };
 }
 
 // ─── Standings calculation ────────────────────────────────────────────────────
@@ -245,12 +315,12 @@ function EditableName({
 
 function ScoreCell({
   value,
-  onChange,
   highlight,
+  readOnly = false,
 }: {
   value: string;
-  onChange: (v: string) => void;
   highlight: boolean;
+  readOnly?: boolean;
 }) {
   return (
     <div
@@ -261,15 +331,12 @@ function ScoreCell({
         boxShadow: highlight ? "0 0 6px rgba(14,165,233,0.3)" : "none",
       }}
     >
-      <input
-        type="text"
-        inputMode="numeric"
-        value={value}
-        onChange={(e) => onChange(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))}
-        placeholder="–"
-        className="w-full h-full text-center text-xs font-black bg-transparent outline-none"
+      <span
+        className="w-full h-full text-center text-xs font-black flex items-center justify-center"
         style={{ color: highlight ? "#e0f2fe" : "#94a3b8" }}
-      />
+      >
+        {value || (readOnly ? "–" : "")}
+      </span>
     </div>
   );
 }
@@ -279,11 +346,9 @@ function ScoreCell({
 function MatchRow({
   match,
   group,
-  onScoreChange,
 }: {
   match: GroupMatch;
   group: Group;
-  onScoreChange: (matchId: string, slot: "score1" | "score2", v: string) => void;
 }) {
   const t1 = group.teams[match.team1Idx];
   const t2 = group.teams[match.team2Idx];
@@ -315,9 +380,9 @@ function MatchRow({
 
       {/* Score */}
       <div className="flex items-center gap-1 shrink-0">
-        <ScoreCell value={match.score1} onChange={(v) => onScoreChange(match.id, "score1", v)} highlight={w1} />
+        <ScoreCell value={match.score1} highlight={w1} readOnly />
         <span className="text-slate-600 text-xs font-bold">–</span>
-        <ScoreCell value={match.score2} onChange={(v) => onScoreChange(match.id, "score2", v)} highlight={w2} />
+        <ScoreCell value={match.score2} highlight={w2} readOnly />
       </div>
 
       {/* Team 2 */}
@@ -422,11 +487,9 @@ function StandingsTable({
 
 function GroupCard({
   group,
-  onScoreChange,
   onNameChange,
 }: {
   group: Group;
-  onScoreChange: (groupId: string, matchId: string, slot: "score1" | "score2", v: string) => void;
   onNameChange: (groupId: string, teamIdx: number, name: string) => void;
 }) {
   const [showMatches, setShowMatches] = useState(true);
@@ -484,7 +547,7 @@ function GroupCard({
         <div className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-500 mb-1.5 flex items-center gap-1.5">
           <Trophy className="w-3 h-3" style={{ color }} />
           Bảng xếp hạng
-          <span className="text-[8px] text-slate-600">(Thắng=3 · Hòa=1)</span>
+          <span className="text-[8px] text-slate-600">(Thắng=3 · Thua=0)</span>
         </div>
         <StandingsTable group={group} onNameChange={onNameChange} />
       </div>
@@ -513,7 +576,6 @@ function GroupCard({
                 <MatchRow
                   match={match}
                   group={group}
-                  onScoreChange={(mId, slot, v) => onScoreChange(group.id, mId, slot, v)}
                 />
               </div>
             </div>
@@ -527,7 +589,7 @@ function GroupCard({
 // ─── Data tables (JSON) ───────────────────────────────────────────────────────
 
 type MainTab = "male" | "mixed" | "schedule";
-type PairSubTab = "roster" | "bracket";
+type PairSubTab = "bracket";
 
 function MixedCouplesTables() {
   const groups = mixedCouplesJson.mixed_couples;
@@ -685,7 +747,7 @@ function QualifiersPanel({
         </div>
         <div className="mt-4 pt-3 border-t border-slate-700/60">
           <div className="text-[10px] font-black uppercase tracking-wider text-sky-500/95 mb-2">
-            Hạng 3 (4 suất) — xếp tự động theo điểm ở tab Bảng đấu — nhập điểm (Đôi Nam)
+            Hạng 3 (4 suất) — xếp tự động theo điểm đã nhập ở tab Lịch thi đấu (Đôi Nam)
           </div>
           <div className="flex flex-col gap-1.5">
             {sortedThirdPlacesDetailed(maleData)
@@ -734,17 +796,24 @@ function QualifiersPanel({
 }
 
 function MatchScheduleTable({
+  rows,
   maleData,
   mixedData,
-  koScores,
-  onKoChange,
 }: {
+  rows: ScheduleRow[];
   maleData: TournamentData;
   mixedData: TournamentData;
-  koScores: KoScores;
-  onKoChange: (stt: number, slot: "s1" | "s2", v: string) => void;
 }) {
-  const rows = matchScheduleJson.full_match_schedule;
+  const scoreLookup: KoScores = useMemo(() => {
+    const out: KoScores = {};
+    for (const r of rows) {
+      out[r.stt] = {
+        s1: toScoreString(r.score_team1),
+        s2: toScoreString(r.score_team2),
+      };
+    }
+    return out;
+  }, [rows]);
 
   const { winner } = useMemo(
     () =>
@@ -752,9 +821,9 @@ function MatchScheduleTable({
         rows as { stt: number; match: string; category: string; players?: string }[],
         maleData,
         mixedData,
-        koScores
+        scoreLookup
       ),
-    [rows, maleData, mixedData, koScores]
+    [rows, maleData, mixedData, scoreLookup]
   );
 
   return (
@@ -774,7 +843,7 @@ function MatchScheduleTable({
               <th className="px-2 py-2 font-black uppercase tracking-wider text-slate-500 min-w-[180px]">Đội 1</th>
               <th className="px-2 py-2 font-black uppercase tracking-wider text-slate-500 min-w-[180px]">Đội 2</th>
               <th className="px-2 py-2 font-black uppercase tracking-wider text-slate-500 w-28">Tỉ số</th>
-              <th className="px-2 py-2 font-black uppercase tracking-wider text-slate-500 w-36">Thắng</th>
+              <th className="px-2 py-2 font-black uppercase tracking-wider text-slate-500 w-36">Trạng thái</th>
             </tr>
           </thead>
           <tbody>
@@ -788,14 +857,10 @@ function MatchScheduleTable({
               const bracketCat = normalizeBracketCategory(r.category);
               const isMaleBracket = bracketCat === "Đôi Nam";
               const sides = getDisplaySides(rowIn, maleData, mixedData, winner);
-              const needKo = needsKoScoreInput(rowIn);
-              const ks = koScores[r.stt];
-              const koLine =
-                ks && ks.s1 !== "" && ks.s2 !== ""
-                  ? `${ks.s1} – ${ks.s2}`
-                  : null;
-              const scoreDisplay = sides.rrScore ?? koLine ?? "—";
+              const s1 = toScoreString(r.score_team1);
+              const s2 = toScoreString(r.score_team2);
               const wTeam = winner(r.stt);
+              const status = s1 !== "" || s2 !== "" ? "Đã hoàn thành" : "Chưa hoàn thành";
               return (
                 <tr key={r.stt} className="border-t border-slate-800/80 hover:bg-slate-800/35 align-top">
                   <td className="px-2 py-1.5 font-mono text-slate-500">{r.stt}</td>
@@ -819,44 +884,12 @@ function MatchScheduleTable({
                   <td className="px-2 py-1.5 text-slate-200">{sides.left}</td>
                   <td className="px-2 py-1.5 text-slate-200">{sides.right}</td>
                   <td className="px-2 py-1.5">
-                    {needKo ? (
-                      <div className="flex items-center gap-1">
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={ks?.s1 ?? ""}
-                          onChange={(e) =>
-                            onKoChange(
-                              r.stt,
-                              "s1",
-                              e.target.value.replace(/[^0-9]/g, "").slice(0, 2)
-                            )
-                          }
-                          placeholder="–"
-                          className="w-7 h-6 rounded text-center text-[10px] font-bold bg-slate-800 border border-slate-600 text-sky-200"
-                        />
-                        <span className="text-slate-600">–</span>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={ks?.s2 ?? ""}
-                          onChange={(e) =>
-                            onKoChange(
-                              r.stt,
-                              "s2",
-                              e.target.value.replace(/[^0-9]/g, "").slice(0, 2)
-                            )
-                          }
-                          placeholder="–"
-                          className="w-7 h-6 rounded text-center text-[10px] font-bold bg-slate-800 border border-slate-600 text-sky-200"
-                        />
-                      </div>
-                    ) : (
-                      <span className="text-emerald-400/90 font-bold">{scoreDisplay}</span>
-                    )}
+                    <span className="text-emerald-400/90 font-bold">
+                      {s1 !== "" || s2 !== "" ? `${s1 || "0"} – ${s2 || "0"}` : "—"}
+                    </span>
                   </td>
-                  <td className="px-2 py-1.5 text-amber-300/90 font-medium truncate max-w-[140px]" title={wTeam?.name}>
-                    {wTeam?.name ?? "—"}
+                  <td className="px-2 py-1.5 text-amber-300/90 font-medium truncate max-w-[140px]" title={status} style={{ color: status === "Đã hoàn thành" ? "#10b981" : "#f9a8d4" }}>
+                    {status}
                   </td>
                 </tr>
               );
@@ -865,8 +898,8 @@ function MatchScheduleTable({
         </table>
       </div>
       <p className="px-3 py-2 text-[10px] text-slate-500 border-t border-slate-800">
-        Vòng tròn: tỉ số lấy tự động từ bảng đấu Đôi Nam / Đôi Nam Nữ. Đôi Nam: Nhất/Nhì bảng và Ba 1–4 (4 hạng 3 tốt nhất) lấy từ bảng điểm.
-        Các trận sau vòng bảng: nhập tỉ số ô bên trái — ô bên phải (đội 1 — đội 2 theo cột); hệ thống suy ra đội thắng và các trận tiếp theo.
+        Tỉ số ở đây được cập nhật từ Google Sheets và hiển thị ở chế độ chỉ đọc. Hai tab bảng đấu đồng bộ tự động từ lịch này.
+        Đôi Nam: Nhất/Nhì bảng và Ba 1–4 (4 hạng 3 tốt nhất) được tính tự động từ điểm vòng tròn.
       </p>
     </div>
   );
@@ -875,92 +908,63 @@ function MatchScheduleTable({
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function BracketStage() {
-  const [data, setData] = useState<TournamentData>([]);
-  const [mixedData, setMixedData] = useState<TournamentData>([]);
-  const [koScores, setKoScores] = useState<KoScores>({});
+  const [baseMaleData, setBaseMaleData] = useState<TournamentData>([]);
+  const [baseMixedData, setBaseMixedData] = useState<TournamentData>([]);
+  const [scheduleRows, setScheduleRows] = useState<ScheduleRow[]>(DEFAULT_SCHEDULE_ROWS);
   const [hydrated, setHydrated] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [lastSyncAt, setLastSyncAt] = useState<string>("");
   const [mainTab, setMainTab] = useState<MainTab>("male");
-  const [maleSubTab, setMaleSubTab] = useState<PairSubTab>("roster");
-  const [mixedSubTab, setMixedSubTab] = useState<PairSubTab>("roster");
+  const [maleSubTab, setMaleSubTab] = useState<PairSubTab>("bracket");
+  const [mixedSubTab, setMixedSubTab] = useState<PairSubTab>("bracket");
 
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect */
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      setData(saved ? (JSON.parse(saved) as TournamentData) : buildMaleTournamentFromJson());
+      setBaseMaleData(saved ? (JSON.parse(saved) as TournamentData) : buildMaleTournamentFromJson());
       const savedM = localStorage.getItem(STORAGE_KEY_MIXED);
-      setMixedData(savedM ? (JSON.parse(savedM) as TournamentData) : buildMixedTournamentFromJson());
-      const savedKo = localStorage.getItem(SCHEDULE_KO_KEY);
-      setKoScores(savedKo ? (JSON.parse(savedKo) as KoScores) : {});
+      setBaseMixedData(savedM ? (JSON.parse(savedM) as TournamentData) : buildMixedTournamentFromJson());
+      const savedRows = localStorage.getItem(SCHEDULE_ROWS_KEY);
+      setScheduleRows(
+        savedRows ? normalizeScheduleRows(JSON.parse(savedRows) as ScheduleRow[]) : DEFAULT_SCHEDULE_ROWS
+      );
     } catch {
-      setData(buildMaleTournamentFromJson());
-      setMixedData(buildMixedTournamentFromJson());
-      setKoScores({});
+      setBaseMaleData(buildMaleTournamentFromJson());
+      setBaseMixedData(buildMixedTournamentFromJson());
+      setScheduleRows(DEFAULT_SCHEDULE_ROWS);
     }
     setHydrated(true);
-    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
   useEffect(() => {
     if (!hydrated) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }, [data, hydrated]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(baseMaleData));
+  }, [baseMaleData, hydrated]);
 
   useEffect(() => {
     if (!hydrated) return;
-    localStorage.setItem(STORAGE_KEY_MIXED, JSON.stringify(mixedData));
-  }, [mixedData, hydrated]);
+    localStorage.setItem(STORAGE_KEY_MIXED, JSON.stringify(baseMixedData));
+  }, [baseMixedData, hydrated]);
 
   useEffect(() => {
     if (!hydrated) return;
-    localStorage.setItem(SCHEDULE_KO_KEY, JSON.stringify(koScores));
-  }, [koScores, hydrated]);
+    localStorage.setItem(SCHEDULE_ROWS_KEY, JSON.stringify(scheduleRows));
+  }, [scheduleRows, hydrated]);
 
-  const handleScoreChange = useCallback(
-    (groupId: string, matchId: string, slot: "score1" | "score2", v: string) => {
-      setData((prev) =>
-        prev.map((g) =>
-          g.id !== groupId
-            ? g
-            : {
-                ...g,
-                matches: g.matches.map((m) =>
-                  m.id !== matchId ? m : { ...m, [slot]: v }
-                ),
-              }
-        )
-      );
-    },
-    []
+  const { maleData, mixedData } = useMemo(
+    () => applyRoundRobinScoresFromSchedule(baseMaleData, baseMixedData, scheduleRows),
+    [baseMaleData, baseMixedData, scheduleRows]
   );
 
   const handleNameChange = useCallback(
     (groupId: string, teamIdx: number, name: string) => {
-      setData((prev) =>
+      setBaseMaleData((prev) =>
         prev.map((g) =>
           g.id !== groupId
             ? g
             : {
                 ...g,
                 teams: g.teams.map((t, i) => (i === teamIdx ? { ...t, name } : t)),
-              }
-        )
-      );
-    },
-    []
-  );
-
-  const handleScoreChangeMixed = useCallback(
-    (groupId: string, matchId: string, slot: "score1" | "score2", v: string) => {
-      setMixedData((prev) =>
-        prev.map((g) =>
-          g.id !== groupId
-            ? g
-            : {
-                ...g,
-                matches: g.matches.map((m) =>
-                  m.id !== matchId ? m : { ...m, [slot]: v }
-                ),
               }
         )
       );
@@ -970,7 +974,7 @@ export default function BracketStage() {
 
   const handleNameChangeMixed = useCallback(
     (groupId: string, teamIdx: number, name: string) => {
-      setMixedData((prev) =>
+      setBaseMixedData((prev) =>
         prev.map((g) =>
           g.id !== groupId
             ? g
@@ -984,41 +988,53 @@ export default function BracketStage() {
     []
   );
 
-  const handleKoChange = useCallback((stt: number, slot: "s1" | "s2", v: string) => {
-    setKoScores((prev) => {
-      const cur = prev[stt] ?? { s1: "", s2: "" };
-      return {
-        ...prev,
-        [stt]: { ...cur, [slot === "s1" ? "s1" : "s2"]: v },
-      };
-    });
+  const handleSyncFromGoogleSheet = useCallback(async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch(LIVE_SCHEDULE_URL, { method: "GET", cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const payload = (await res.json()) as { rows?: ScheduleRow[] };
+      if (!payload.rows || !Array.isArray(payload.rows)) throw new Error("Dữ liệu không hợp lệ");
+      setScheduleRows(normalizeScheduleRows(payload.rows));
+      setLastSyncAt(new Date().toLocaleString("vi-VN"));
+    } catch (err) {
+      console.error("Sync schedule failed:", err);
+      alert("Không thể đồng bộ dữ liệu từ Google Sheets. Vui lòng thử lại.");
+    } finally {
+      setSyncing(false);
+    }
   }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    void handleSyncFromGoogleSheet();
+  }, [hydrated, handleSyncFromGoogleSheet]);
 
   const handleReset = () => {
     if (mainTab === "schedule") {
-      if (!confirm("Xóa toàn bộ tỉ số nhập cho các trận knock-out trên lịch?")) return;
-      localStorage.removeItem(SCHEDULE_KO_KEY);
-      setKoScores({});
+      if (!confirm("Reset toàn bộ tỉ số đã nhập trên Lịch thi đấu?")) return;
+      localStorage.removeItem(SCHEDULE_ROWS_KEY);
+      setScheduleRows(DEFAULT_SCHEDULE_ROWS);
       return;
     }
     if (mainTab === "mixed") {
-      if (!confirm("Reset bảng đấu Đôi Nam Nữ? Điểm và tên chỉnh sửa sẽ mất.")) return;
+      if (!confirm("Reset chỉnh sửa tên đội Đôi Nam Nữ?")) return;
       localStorage.removeItem(STORAGE_KEY_MIXED);
-      setMixedData(buildMixedTournamentFromJson());
+      setBaseMixedData(buildMixedTournamentFromJson());
       return;
     }
-    if (!confirm("Reset bảng đấu Đôi Nam? Điểm và tên chỉnh sửa sẽ mất.")) return;
+    if (!confirm("Reset chỉnh sửa tên đội Đôi Nam?")) return;
     localStorage.removeItem(STORAGE_KEY);
-    setData(buildMaleTournamentFromJson());
+    setBaseMaleData(buildMaleTournamentFromJson());
   };
 
   // Summary stats
-  const totalPlayed = data.reduce(
+  const totalPlayed = maleData.reduce(
     (acc, g) => acc + g.matches.filter((m) => m.score1 !== "" && m.score2 !== "").length,
     0
   );
-  const totalMatches = data.reduce((acc, g) => acc + g.matches.length, 0);
-  const completedGroups = data.filter(groupCompleted).length;
+  const totalMatches = maleData.reduce((acc, g) => acc + g.matches.length, 0);
+  const completedGroups = maleData.filter(groupCompleted).length;
 
   const totalPlayedMixed = mixedData.reduce(
     (acc, g) => acc + g.matches.filter((m) => m.score1 !== "" && m.score2 !== "").length,
@@ -1138,7 +1154,7 @@ export default function BracketStage() {
                 </span>
               ))}
               {mainTab === "schedule" && [
-                { label: `${matchScheduleJson.full_match_schedule.length} trận dự kiến`, color: "#10b981" },
+                { label: `${scheduleRows.length} trận dự kiến`, color: "#10b981" },
                 { label: "Đôi Nam & Đôi Nam Nữ", color: "#38bdf8" },
               ].map(({ label, color }) => (
                 <span
@@ -1221,7 +1237,7 @@ export default function BracketStage() {
             </span>
             <span className="text-slate-400 font-medium flex items-center gap-1.5">
               <Check className="w-3 h-3 text-teal-400" />
-              Thắng: 3đ · Hòa: 1đ · Thua: 0đ
+              Điểm số cập nhật tự động từ tab Lịch thi đấu
             </span>
           </div>
         )}
@@ -1237,13 +1253,13 @@ export default function BracketStage() {
             </span>
             <span className="text-slate-400 font-medium flex items-center gap-1.5">
               <Check className="w-3 h-3 text-teal-400" />
-              Thắng: 3đ · Hòa: 1đ · Thua: 0đ
+              Điểm số cập nhật tự động từ tab Lịch thi đấu
             </span>
           </div>
         )}
         {mainTab === "schedule" && (
           <div className="px-4 md:px-6 py-2 text-[11px] text-slate-500 border-t border-slate-800/80 mt-2">
-            Tỉ số vòng tròn đồng bộ từ hai tab bảng đấu; nhập tỉ số knock-out trực tiếp trên bảng lịch (ô tỉ số).
+            Nhập tỉ số trực tiếp tại Lịch thi đấu (vòng tròn và knock-out). Hai tab bảng đấu chỉ hiển thị kết quả đồng bộ.
           </div>
         )}
       </div>
@@ -1279,8 +1295,8 @@ export default function BracketStage() {
 
             <div className="flex flex-wrap gap-2 mb-6">
               {([
-                { id: "roster" as const, label: "Danh sách đăng ký theo bảng", Icon: ClipboardList },
-                { id: "bracket" as const, label: "Bảng đấu — nhập điểm", Icon: LayoutGrid },
+                { id: "bracket" as const, label: "Bảng đấu", Icon: LayoutGrid },
+                // { id: "roster" as const, label: "Danh sách đăng ký theo bảng", Icon: ClipboardList },
               ]).map(({ id, label, Icon }) => {
                 const active = maleSubTab === id;
                 return (
@@ -1310,16 +1326,13 @@ export default function BracketStage() {
               })}
             </div>
 
-            {maleSubTab === "roster" && <MaleCouplesRosterTables />}
-
             {maleSubTab === "bracket" && (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-4">
-                  {data.map((group) => (
+                  {maleData.map((group) => (
                     <GroupCard
                       key={group.id}
                       group={group}
-                      onScoreChange={handleScoreChange}
                       onNameChange={handleNameChange}
                     />
                   ))}
@@ -1372,8 +1385,8 @@ export default function BracketStage() {
 
             <div className="flex flex-wrap gap-2 mb-6">
               {([
-                { id: "roster" as const, label: "Danh sách đăng ký theo bảng", Icon: ClipboardList },
-                { id: "bracket" as const, label: "Bảng đấu — nhập điểm", Icon: LayoutGrid },
+                // { id: "roster" as const, label: "Danh sách đăng ký theo bảng", Icon: ClipboardList },
+                { id: "bracket" as const, label: "Bảng đấu", Icon: LayoutGrid },
               ]).map(({ id, label, Icon }) => {
                 const active = mixedSubTab === id;
                 return (
@@ -1403,7 +1416,7 @@ export default function BracketStage() {
               })}
             </div>
 
-            {mixedSubTab === "roster" && <MixedCouplesTables />}
+            {/* {mixedSubTab === "roster" && <MixedCouplesTables />} */}
 
             {mixedSubTab === "bracket" && (
               <>
@@ -1412,7 +1425,6 @@ export default function BracketStage() {
                     <GroupCard
                       key={group.id}
                       group={group}
-                      onScoreChange={handleScoreChangeMixed}
                       onNameChange={handleNameChangeMixed}
                     />
                   ))}
@@ -1442,15 +1454,27 @@ export default function BracketStage() {
 
         {mainTab === "schedule" && (
           <>
-            <p className="text-slate-400 text-sm mb-5 max-w-2xl">
-              Lịch đồng bộ với điểm vòng tròn (Đôi Nam / Đôi Nam Nữ). Các trận sau vòng bảng: nhập tỉ số trên lịch để suy ra đội thắng và các cặp tiếp theo.
-            </p>
-            <QualifiersPanel maleData={data} mixedData={mixedData} />
+            <div className="mb-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <p className="text-slate-400 text-sm max-w-2xl">
+                Tab Lịch thi đấu là nơi nhập điểm duy nhất. Bảng đấu Đôi Nam / Đôi Nam Nữ tự động cập nhật theo tỉ số đã nhập tại đây.
+              </p>
+              <button
+                type="button"
+                onClick={() => void handleSyncFromGoogleSheet()}
+                disabled={syncing}
+                className="px-3 py-2 rounded-lg text-xs font-bold border border-cyan-500/40 text-cyan-200 bg-cyan-500/10 disabled:opacity-50"
+              >
+                {syncing ? "Đang đồng bộ..." : "Đồng bộ Google Sheets"}
+              </button>
+            </div>
+            {lastSyncAt && (
+              <p className="text-[11px] text-slate-500 mb-4">Lần đồng bộ gần nhất: {lastSyncAt}</p>
+            )}
+            <QualifiersPanel maleData={maleData} mixedData={mixedData} />
             <MatchScheduleTable
-              maleData={data}
+              rows={scheduleRows}
+              maleData={maleData}
               mixedData={mixedData}
-              koScores={koScores}
-              onKoChange={handleKoChange}
             />
           </>
         )}
