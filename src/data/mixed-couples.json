@@ -26,8 +26,15 @@
         "id": "A4",
         "company": "Vietnam Airlines",
         "pair_id": "Đôi 8",
-        "male": "Vũ Duy Khánh (NT)",
+        "male": "Đỗ Đức Hoàng",
         "female": "Đinh Bích Hòa"
+      },
+      {
+        "id": "A5",
+        "company": "Hanoitourist & CTY TNHH Du lịch và Truyền thông Group",
+        "pair_id": "Đôi 17",
+        "male": "Nguyễn Quốc Việt",
+        "female": "Đỗ Hải Yến"
       }
     ],
     "B": [
@@ -58,6 +65,13 @@
         "pair_id": "Đôi 10",
         "male": "Đinh Trọng Phúc",
         "female": "Vũ Bích Ngọc"
+      },
+      {
+        "id": "B5",
+        "company": "Công ty du lịch SVN",
+        "pair_id": "Đôi 18",
+        "male": "Nguyễn Tiến Luận",
+        "female": "Đỗ Thúy Hằng"
       }
     ],
     "C": [
@@ -88,6 +102,13 @@
         "pair_id": "Đôi 14",
         "male": "Nguyễn Thế Dũng",
         "female": "Nguyễn Diệu Anh"
+      },
+      {
+        "id": "C5",
+        "company": "Nam Thanh Travel",
+        "pair_id": "Đôi 20",
+        "male": "Trần Ngọc Anh",
+        "female": "Trương Bích Hậu"
       }
     ],
     "D": [
@@ -118,6 +139,13 @@
         "pair_id": "Đôi 16",
         "male": "Vũ Thịnh",
         "female": "Đoàn Duyên"
+      },
+      {
+        "id": "D5",
+        "company": "Vietlen Travel",
+        "pair_id": "Đôi 19",
+        "male": "Trần Văn Hòa",
+        "female": "Nguyễn Trang"
       }
     ]
   }

@@ -72,7 +72,7 @@ export default function PageLayout({ title, subtitle, children }: PageLayoutProp
               className="w-8 h-8 rounded-lg bg-white/10 border border-white/15 flex items-center justify-center hover:bg-cyan-500/30 transition-all">
               <Globe className="w-4 h-4 text-cyan-300" />
             </a>
-            <a href="tel:1900xxxx"
+            <a href="tel:0936236086"
               className="w-8 h-8 rounded-lg bg-white/10 border border-white/15 flex items-center justify-center hover:bg-orange-500/30 transition-all">
               <Phone className="w-4 h-4 text-orange-300" />
             </a>

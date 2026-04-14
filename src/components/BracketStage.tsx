@@ -14,6 +14,8 @@ import {
   createWinnerLookup,
   getDisplaySides,
   needsKoScoreInput,
+  normalizeBracketCategory,
+  sortedThirdPlacesDetailed,
   type KoScores,
 } from "@/lib/scheduleResolve";
 
@@ -44,12 +46,21 @@ type TournamentData = Group[];
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STORAGE_KEY = "tournament_male_v2";
-const STORAGE_KEY_MIXED = "tournament_mixed_v1";
+const STORAGE_KEY_MIXED = "tournament_mixed_v2";
 const SCHEDULE_KO_KEY = "schedule_ko_v1";
 const MALE_GROUP_LETTERS = ["A", "B", "C", "D", "E", "F"] as const;
 const MIXED_GROUP_LETTERS = ["A", "B", "C", "D"] as const;
-// All C(4,2) = 6 pairs for round-robin
-const RR_PAIRS: [number, number][] = [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]];
+
+/** Vòng tròn: tất cả cặp (i,j) với i < j — ví dụ 4 đội → 6 trận, 5 đội → 10 trận */
+function rrPairsForTeamCount(teamCount: number): [number, number][] {
+  const pairs: [number, number][] = [];
+  for (let i = 0; i < teamCount; i++) {
+    for (let j = i + 1; j < teamCount; j++) {
+      pairs.push([i, j]);
+    }
+  }
+  return pairs;
+}
 
 const GROUP_COLORS = [
   "#3b82f6", "#06b6d4", "#8b5cf6", "#ec4899",
@@ -70,7 +81,7 @@ function buildMaleTournamentFromJson(): TournamentData {
       id: `g${idx}`,
       letter,
       teams,
-      matches: RR_PAIRS.map(([i, j], m) => ({
+      matches: rrPairsForTeamCount(teams.length).map(([i, j], m) => ({
         id: `g${idx}-m${m}`,
         team1Idx: i,
         team2Idx: j,
@@ -93,7 +104,7 @@ function buildMixedTournamentFromJson(): TournamentData {
       id: `mx${idx}`,
       letter,
       teams,
-      matches: RR_PAIRS.map(([i, j], m) => ({
+      matches: rrPairsForTeamCount(teams.length).map(([i, j], m) => ({
         id: `mx${idx}-m${m}`,
         team1Idx: i,
         team2Idx: j,
@@ -335,7 +346,7 @@ function StandingsTable({
 }) {
   const rows = calcStandings(group);
   const completed = groupCompleted(group);
-  const allPlayed6 = group.matches.filter((m) => m.score1 !== "" && m.score2 !== "").length;
+  const playedRrCount = group.matches.filter((m) => m.score1 !== "" && m.score2 !== "").length;
 
   return (
     <div className="overflow-hidden rounded-lg border border-slate-700/50">
@@ -369,7 +380,7 @@ function StandingsTable({
               gridTemplateColumns: "1.2rem 1fr 2rem 2rem 2rem 2rem 2rem",
               background: qualified
                 ? "rgba(16,185,129,0.08)"
-                : isTop2 && allPlayed6 > 0
+                : isTop2 && playedRrCount > 0
                 ? "rgba(14,165,233,0.05)"
                 : "transparent",
             }}
@@ -422,7 +433,8 @@ function GroupCard({
   const gIdx = MALE_GROUP_LETTERS.indexOf(group.letter as (typeof MALE_GROUP_LETTERS)[number]);
   const color = GROUP_COLORS[gIdx] ?? "#3b82f6";
   const played = group.matches.filter((m) => m.score1 !== "" && m.score2 !== "").length;
-  const completed = played === 6;
+  const totalRr = group.matches.length;
+  const completed = played === totalRr;
 
   return (
     <div
@@ -451,7 +463,7 @@ function GroupCard({
           <div>
             <div className="font-black text-white text-sm">Bảng {group.letter}</div>
             <div className="text-[10px]" style={{ color: `${color}99` }}>
-              {played}/6 trận · {completed ? "✓ Hoàn tất" : `còn ${6 - played}`}
+              {played}/{totalRr} trận · {completed ? "✓ Hoàn tất" : `còn ${totalRr - played}`}
             </div>
           </div>
         </div>
@@ -521,7 +533,7 @@ function MixedCouplesTables() {
   const groups = mixedCouplesJson.mixed_couples;
   const letters = ["A", "B", "C", "D"] as const;
   return (
-    <div className="space-y-6">
+    <div className="flex flex-row gap-4 w-full grid grid-cols-2 gap-4">
       {letters.map((L) => {
         const rows = groups[L];
         const color = GROUP_COLORS[letters.indexOf(L)] ?? "#3b82f6";
@@ -544,19 +556,17 @@ function MixedCouplesTables() {
               Bảng {L} — Đôi Nam Nữ
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full table-fixed border-collapse text-left text-xs min-w-[640px]">
+              <table className="w-full table-fixed border-collapse text-left text-xs min-w-[340px]">
                 <colgroup>
-                  <col style={{ width: "8%" }} />
-                  <col style={{ width: "34%" }} />
                   <col style={{ width: "10%" }} />
-                  <col style={{ width: "24%" }} />
-                  <col style={{ width: "24%" }} />
+                  <col style={{ width: "45%" }} />
+                  <col style={{ width: "45%" }} />
                 </colgroup>
                 <thead>
                   <tr className="border-b border-slate-700/80" style={{ background: "#0c1525" }}>
                     <th className="px-3 py-2.5 font-black uppercase tracking-wider text-slate-500 align-top">Mã</th>
-                    <th className="px-3 py-2.5 font-black uppercase tracking-wider text-slate-500 align-top">Công ty / Đơn vị</th>
-                    <th className="px-3 py-2.5 font-black uppercase tracking-wider text-slate-500 align-top">Đôi</th>
+                    {/* <th className="px-3 py-2.5 font-black uppercase tracking-wider text-slate-500 align-top">Công ty / Đơn vị</th>
+                    <th className="px-3 py-2.5 font-black uppercase tracking-wider text-slate-500 align-top">Đôi</th> */}
                     <th className="px-3 py-2.5 font-black uppercase tracking-wider text-slate-500 align-top">VĐV Nam</th>
                     <th className="px-3 py-2.5 font-black uppercase tracking-wider text-slate-500 align-top">VĐV Nữ</th>
                   </tr>
@@ -565,8 +575,8 @@ function MixedCouplesTables() {
                   {rows.map((r) => (
                     <tr key={r.id} className="border-t border-slate-800/90 hover:bg-slate-800/40">
                       <td className="px-3 py-2 align-top font-mono font-bold text-sky-400 whitespace-nowrap">{r.id}</td>
-                      <td className="px-3 py-2 align-top text-slate-300 min-w-0 break-words">{r.company}</td>
-                      <td className="px-3 py-2 align-top text-amber-400/90 whitespace-nowrap">{r.pair_id}</td>
+                      {/* <td className="px-3 py-2 align-top text-slate-300 min-w-0 break-words">{r.company}</td>
+                      <td className="px-3 py-2 align-top text-amber-400/90 whitespace-nowrap">{r.pair_id}</td> */}
                       <td className="px-3 py-2 align-top text-slate-200 break-words">{r.male}</td>
                       <td className="px-3 py-2 align-top text-slate-200 break-words">{r.female}</td>
                     </tr>
@@ -584,7 +594,7 @@ function MixedCouplesTables() {
 function MaleCouplesRosterTables() {
   const groups = maleCouplesJson.male_couples;
   return (
-    <div className="space-y-6">
+    <div className="flex flex-row gap-4 w-full grid grid-cols-3 gap-4">
       {MALE_GROUP_LETTERS.map((L) => {
         const rows = groups[L];
         const color = GROUP_COLORS[MALE_GROUP_LETTERS.indexOf(L)] ?? "#3b82f6";
@@ -607,31 +617,25 @@ function MaleCouplesRosterTables() {
               Bảng {L} — Đôi Nam
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full table-fixed border-collapse text-left text-xs min-w-[560px]">
+              <table className="w-full table-fixed border-collapse text-left text-xs">
                 <colgroup>
                   <col style={{ width: "10%" }} />
-                  <col style={{ width: "38%" }} />
-                  <col style={{ width: "12%" }} />
-                  <col style={{ width: "40%" }} />
+                  <col style={{ width: "45%" }} />
+                  <col style={{ width: "45%" }} />
                 </colgroup>
                 <thead>
                   <tr className="border-b border-slate-700/80" style={{ background: "#0c1525" }}>
                     <th className="px-3 py-2.5 font-black uppercase tracking-wider text-slate-500 align-top">Mã</th>
-                    <th className="px-3 py-2.5 font-black uppercase tracking-wider text-slate-500 align-top">Công ty / Đơn vị</th>
-                    <th className="px-3 py-2.5 font-black uppercase tracking-wider text-slate-500 align-top">Đôi</th>
-                    <th className="px-3 py-2.5 font-black uppercase tracking-wider text-slate-500 align-top">Vận động viên</th>
+                    <th className="px-3 py-2.5 font-black uppercase tracking-wider text-slate-500 align-top">VĐV Nam 1</th>
+                    <th className="px-3 py-2.5 font-black uppercase tracking-wider text-slate-500 align-top">VĐV Nam 2</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((r) => (
                     <tr key={r.id} className="border-t border-slate-800/90 hover:bg-slate-800/40">
                       <td className="px-3 py-2 align-top font-mono font-bold text-sky-400 whitespace-nowrap">{r.id}</td>
-                      <td className="px-3 py-2 align-top text-slate-300 min-w-0 break-words">{r.company}</td>
-                      <td className="px-3 py-2 align-top text-amber-400/90 whitespace-nowrap">{r.pair_id}</td>
-                      <td className="px-3 py-2 align-top text-slate-200">
-                        <span className="block leading-snug">{r.members[0]}</span>
-                        <span className="mt-1 block text-[11px] leading-snug text-slate-300/95">{r.members[1]}</span>
-                      </td>
+                      <td className="px-3 py-2 align-top text-slate-200 break-words">{r.members[0]}</td>
+                      <td className="px-3 py-2 align-top text-slate-200 break-words">{r.members[1]}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -658,7 +662,7 @@ function QualifiersPanel({
         style={{ background: "rgba(15,23,42,0.85)" }}
       >
         <div className="text-[10px] font-black uppercase tracking-widest text-sky-400 mb-3">
-          Đôi Nam — Top 2 mỗi bảng (theo điểm vòng bảng)
+          Đôi Nam — 2 đội Nhất &amp; Nhì mỗi bảng + 4 đội hạng 3 có thành tích tốt nhất
         </div>
         <div className="space-y-3 text-xs">
           {maleData.map((g) => {
@@ -679,13 +683,31 @@ function QualifiersPanel({
             );
           })}
         </div>
+        <div className="mt-4 pt-3 border-t border-slate-700/60">
+          <div className="text-[10px] font-black uppercase tracking-wider text-sky-500/95 mb-2">
+            Hạng 3 (4 suất) — xếp tự động theo điểm ở tab Bảng đấu — nhập điểm (Đôi Nam)
+          </div>
+          <div className="flex flex-col gap-1.5">
+            {sortedThirdPlacesDetailed(maleData)
+              .slice(0, 4)
+              .map((row, i) => (
+                <span key={`${row.team.id}-ba-${i}`} className="text-slate-200 text-xs">
+                  <span className="text-slate-500">Ba {i + 1}:</span>{" "}
+                  <span className="font-semibold text-sky-200">{row.team.name}</span>
+                  <span className="text-slate-500 ml-1">
+                    (bảng {row.groupLetter}) ({row.pts}đ)
+                  </span>
+                </span>
+              ))}
+          </div>
+        </div>
       </div>
       <div
         className="rounded-xl border border-pink-500/25 p-4"
         style={{ background: "rgba(15,23,42,0.85)" }}
       >
         <div className="text-[10px] font-black uppercase tracking-widest text-pink-400 mb-3">
-          Đôi Nam Nữ — Top 2 mỗi bảng
+          Đôi Nam Nữ — 2 đội Nhất &amp; Nhì mỗi bảng
         </div>
         <div className="space-y-3 text-xs">
           {mixedData.map((g) => {
@@ -747,8 +769,8 @@ function MatchScheduleTable({
               <th className="px-2 py-2 font-black uppercase tracking-wider text-slate-500 w-9">STT</th>
               <th className="px-2 py-2 font-black uppercase tracking-wider text-slate-500 w-14">Giờ</th>
               <th className="px-2 py-2 font-black uppercase tracking-wider text-slate-500 w-20">Sân</th>
-              <th className="px-2 py-2 font-black uppercase tracking-wider text-slate-500 w-24">Nội dung</th>
-              <th className="px-2 py-2 font-black uppercase tracking-wider text-slate-500 min-w-[100px]">Trận (mã)</th>
+              <th className="px-2 py-2 font-black uppercase tracking-wider text-slate-500 w-50">Nội dung</th>
+              <th className="px-2 py-2 font-black uppercase tracking-wider text-slate-500 min-w-[80px]">Trận (mã)</th>
               <th className="px-2 py-2 font-black uppercase tracking-wider text-slate-500 min-w-[180px]">Đội 1</th>
               <th className="px-2 py-2 font-black uppercase tracking-wider text-slate-500 min-w-[180px]">Đội 2</th>
               <th className="px-2 py-2 font-black uppercase tracking-wider text-slate-500 w-28">Tỉ số</th>
@@ -763,6 +785,8 @@ function MatchScheduleTable({
                 category: r.category,
                 players: r.players,
               };
+              const bracketCat = normalizeBracketCategory(r.category);
+              const isMaleBracket = bracketCat === "Đôi Nam";
               const sides = getDisplaySides(rowIn, maleData, mixedData, winner);
               const needKo = needsKoScoreInput(rowIn);
               const ks = koScores[r.stt];
@@ -781,12 +805,11 @@ function MatchScheduleTable({
                     <span
                       className="inline-block px-2 py-0.5 rounded text-[10px] font-bold"
                       style={{
-                        background:
-                          r.category === "Đôi Nam"
-                            ? "rgba(59,130,246,0.2)"
-                            : "rgba(236,72,153,0.18)",
-                        color: r.category === "Đôi Nam" ? "#93c5fd" : "#f9a8d4",
-                        border: `1px solid ${r.category === "Đôi Nam" ? "rgba(59,130,246,0.35)" : "rgba(236,72,153,0.35)"}`,
+                        background: isMaleBracket
+                          ? "rgba(59,130,246,0.2)"
+                          : "rgba(236,72,153,0.18)",
+                        color: isMaleBracket ? "#93c5fd" : "#f9a8d4",
+                        border: `1px solid ${isMaleBracket ? "rgba(59,130,246,0.35)" : "rgba(236,72,153,0.35)"}`,
                       }}
                     >
                       {r.category}
@@ -842,8 +865,8 @@ function MatchScheduleTable({
         </table>
       </div>
       <p className="px-3 py-2 text-[10px] text-slate-500 border-t border-slate-800">
-        Vòng tròn: tỉ số lấy tự động từ bảng đấu Đôi Nam / Đôi Nam Nữ. Các trận sau vòng bảng: nhập tỉ số ô bên trái — ô bên phải
-        (đội 1 — đội 2 theo cột); hệ thống suy ra đội thắng và các trận tiếp theo.
+        Vòng tròn: tỉ số lấy tự động từ bảng đấu Đôi Nam / Đôi Nam Nữ. Đôi Nam: Nhất/Nhì bảng và Ba 1–4 (4 hạng 3 tốt nhất) lấy từ bảng điểm.
+        Các trận sau vòng bảng: nhập tỉ số ô bên trái — ô bên phải (đội 1 — đội 2 theo cột); hệ thống suy ra đội thắng và các trận tiếp theo.
       </p>
     </div>
   );
@@ -1056,7 +1079,7 @@ export default function BracketStage() {
           <div className="hidden md:flex items-center gap-4 text-xs text-blue-200">
             <span className="flex items-center gap-1.5">
               <Phone className="w-3.5 h-3.5 text-orange-400" />
-              <span className="font-semibold">1900 xxxx</span>
+              <span className="font-semibold">0936 236 086</span>
             </span>
             <span className="flex items-center gap-1.5">
               <Globe className="w-3.5 h-3.5 text-cyan-400" />
@@ -1101,7 +1124,7 @@ export default function BracketStage() {
               ))}
               {mainTab === "mixed" && [
                 { label: "4 Bảng đấu", color: "#ec4899" },
-                { label: "16 Đội", color: "#a78bfa" },
+                { label: "20 Đội", color: "#a78bfa" },
                 { label: "Vòng tròn tính điểm", color: "#f97316" },
                 { label: `${totalPlayedMixed}/${totalMatchesMixed} Trận`, color: "#10b981" },
                 { label: `${completedGroupsMixed}/4 Bảng xong`, color: "#fbbf24" },

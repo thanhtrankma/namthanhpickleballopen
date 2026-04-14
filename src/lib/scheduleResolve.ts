@@ -22,6 +22,14 @@ export interface SchedGroup {
 
 export type SchedTournament = SchedGroup[];
 
+/** Chuẩn hoá category từ JSON: "Đôi Nam" | "BK1 Đôi Nam" | "CK Đôi Nam Nữ" | … */
+export function normalizeBracketCategory(category: string): "Đôi Nam" | "Đôi Nam Nữ" {
+  const c = category.trim();
+  if (c.includes("Đôi Nam Nữ")) return "Đôi Nam Nữ";
+  if (c.includes("Đôi Nam")) return "Đôi Nam";
+  return "Đôi Nam";
+}
+
 export interface StandingRow {
   team: SchedTeam;
   teamIdx: number;
@@ -128,15 +136,36 @@ export function teamAtRank(group: SchedGroup, rankIndex: number): SchedTeam | un
   return calcStandings(group)[rankIndex]?.team;
 }
 
-export function sortedThirdPlaces(data: SchedTournament): SchedTeam[] {
-  const thirds: { team: SchedTeam; pts: number; gd: number; gf: number }[] = [];
+export interface ThirdPlaceRow {
+  team: SchedTeam;
+  groupLetter: string;
+  pts: number;
+  gd: number;
+  gf: number;
+}
+
+/** Một đội hạng 3 mỗi bảng, sắp xếp theo thành tích (Ba 1 = tốt nhất) */
+export function sortedThirdPlacesDetailed(data: SchedTournament): ThirdPlaceRow[] {
+  const thirds: ThirdPlaceRow[] = [];
   for (const g of data) {
     const s = calcStandings(g);
     const row = s[2];
-    if (row) thirds.push({ team: row.team, pts: row.pts, gd: row.gd, gf: row.gf });
+    if (row) {
+      thirds.push({
+        team: row.team,
+        groupLetter: g.letter,
+        pts: row.pts,
+        gd: row.gd,
+        gf: row.gf,
+      });
+    }
   }
   thirds.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
-  return thirds.map((x) => x.team);
+  return thirds;
+}
+
+export function sortedThirdPlaces(data: SchedTournament): SchedTeam[] {
+  return sortedThirdPlacesDetailed(data).map((x) => x.team);
 }
 
 export function resolveStandingToken(
@@ -223,8 +252,8 @@ export function createWinnerLookup(
   const rowByStt = new Map(rows.map((r) => [r.stt, r]));
   const cache = new Map<number, SchedTeam | undefined>();
 
-  function dataFor(cat: string): SchedTournament {
-    return cat === "Đôi Nam" ? maleData : mixedData;
+  function dataFor(categoryRaw: string): SchedTournament {
+    return normalizeBracketCategory(categoryRaw) === "Đôi Nam" ? maleData : mixedData;
   }
 
   function winner(stt: number): SchedTeam | undefined {
@@ -234,10 +263,10 @@ export function createWinnerLookup(
       cache.set(stt, undefined);
       return undefined;
     }
-    const cat = row.category as "Đôi Nam" | "Đôi Nam Nữ";
+    const bracket = normalizeBracketCategory(row.category);
     const data = dataFor(row.category);
 
-    const rr = parseRRMatchString(row.match, cat);
+    const rr = parseRRMatchString(row.match, bracket);
     if (rr) {
       const g = findGroup(data, rr.letter);
       if (!g) {
@@ -266,11 +295,11 @@ export function createWinnerLookup(
       let leftTeam = resolveStandingToken(leftTok, data);
       let rightTeam = resolveStandingToken(rightTok, data);
       if (!leftTeam) {
-        const stL = resolveThangTokenToStt(leftTok, cat);
+        const stL = resolveThangTokenToStt(leftTok, bracket);
         if (stL !== undefined) leftTeam = winner(stL);
       }
       if (!rightTeam) {
-        const stR = resolveThangTokenToStt(rightTok, cat);
+        const stR = resolveThangTokenToStt(rightTok, bracket);
         if (stR !== undefined) rightTeam = winner(stR);
       }
 
@@ -298,7 +327,7 @@ export function getRRScoreDisplay(
   maleData: SchedTournament,
   mixedData: SchedTournament
 ): string | null {
-  const cat = row.category as "Đôi Nam" | "Đôi Nam Nữ";
+  const cat = normalizeBracketCategory(row.category);
   const rr = parseRRMatchString(row.match, cat);
   if (!rr) return null;
   const data = cat === "Đôi Nam" ? maleData : mixedData;
@@ -310,7 +339,7 @@ export function getRRScoreDisplay(
 }
 
 export function needsKoScoreInput(row: ScheduleRowInput): boolean {
-  const cat = row.category as "Đôi Nam" | "Đôi Nam Nữ";
+  const cat = normalizeBracketCategory(row.category);
   if (parseRRMatchString(row.match, cat)) return false;
   if (row.match.trim() === "Chung Kết") return true;
   return splitVs(row.match) !== null || (!!row.players && splitVs(row.players) !== null);
@@ -323,7 +352,7 @@ export function getDisplaySides(
   mixedData: SchedTournament,
   winner: (stt: number) => SchedTeam | undefined
 ): { left: string; right: string; rrScore: string | null } {
-  const cat = row.category as "Đôi Nam" | "Đôi Nam Nữ";
+  const cat = normalizeBracketCategory(row.category);
   const data = cat === "Đôi Nam" ? maleData : mixedData;
   const rr = parseRRMatchString(row.match, cat);
   if (rr) {
