@@ -862,8 +862,8 @@ function MatchScheduleTable({
               const bracketCat = normalizeBracketCategory(r.category);
               const isMaleBracket = bracketCat === "Đôi Nam";
               const sides = getDisplaySides(rowIn, maleData, mixedData, winner);
-              const displayTeam1 = r.player_team1 || sides.left;
-              const displayTeam2 = r.player_team2 || sides.right;
+              const displayTeam1 = r.player_team1?.replace(/\n/g, ' & ') || sides.left;
+              const displayTeam2 = r.player_team2?.replace(/\n/g, ' & ') || sides.right;
               const s1 = toScoreString(r.score_team1);
               const s2 = toScoreString(r.score_team2);
               const status = r.status || (s1 !== "" || s2 !== "" ? "Đã hoàn thành" : "Chưa hoàn thành");
