@@ -60,6 +60,8 @@ interface ScheduleRow {
   category: string;
   match: string;
   players?: string;
+  player_team1?: string;
+  player_team2?: string;
   score_team1?: string | number;
   score_team2?: string | number;
   status?: string;
@@ -78,9 +80,12 @@ function normalizeScheduleRows(rows: ScheduleRow[]): ScheduleRow[] {
       ...r,
       time: String(r.time ?? ""),
       court: r.court ?? "",
+      players: String(r.players ?? "").trim(),
+      player_team1: String(r.player_team1 ?? "").trim(),
+      player_team2: String(r.player_team2 ?? "").trim(),
       score_team1: toScoreString(r.score_team1),
       score_team2: toScoreString(r.score_team2),
-      status: r.status ?? "",
+      status: String(r.status ?? "").trim(),
     }))
     .sort((a, b) => a.stt - b.stt);
 }
@@ -857,10 +862,11 @@ function MatchScheduleTable({
               const bracketCat = normalizeBracketCategory(r.category);
               const isMaleBracket = bracketCat === "Đôi Nam";
               const sides = getDisplaySides(rowIn, maleData, mixedData, winner);
+              const displayTeam1 = r.player_team1 || sides.left;
+              const displayTeam2 = r.player_team2 || sides.right;
               const s1 = toScoreString(r.score_team1);
               const s2 = toScoreString(r.score_team2);
-              const wTeam = winner(r.stt);
-              const status = s1 !== "" || s2 !== "" ? "Đã hoàn thành" : "Chưa hoàn thành";
+              const status = r.status || (s1 !== "" || s2 !== "" ? "Đã hoàn thành" : "Chưa hoàn thành");
               return (
                 <tr key={r.stt} className="border-t border-slate-800/80 hover:bg-slate-800/35 align-top">
                   <td className="px-2 py-1.5 font-mono text-slate-500">{r.stt}</td>
@@ -881,10 +887,10 @@ function MatchScheduleTable({
                     </span>
                   </td>
                   <td className="px-2 py-1.5 text-slate-400 font-mono">{r.match}</td>
-                  <td className="px-2 py-1.5 text-slate-200">{sides.left}</td>
-                  <td className="px-2 py-1.5 text-slate-200">{sides.right}</td>
+                  <td className="px-2 py-1.5 text-slate-200">{displayTeam1}</td>
+                  <td className="px-2 py-1.5 text-slate-200">{displayTeam2}</td>
                   <td className="px-2 py-1.5">
-                    <span className="text-emerald-400/90 font-bold">
+                    <span className="text-emerald-400/90 font-bold text-xs">
                       {s1 !== "" || s2 !== "" ? `${s1 || "0"} – ${s2 || "0"}` : "—"}
                     </span>
                   </td>
