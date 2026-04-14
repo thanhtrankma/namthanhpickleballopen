@@ -866,7 +866,7 @@ function MatchScheduleTable({
               const displayTeam2 = r.player_team2?.replace(/\n/g, ' & ') || sides.right;
               const s1 = toScoreString(r.score_team1);
               const s2 = toScoreString(r.score_team2);
-              const status = r.status || (s1 !== "" || s2 !== "" ? "Đã hoàn thành" : "Chưa hoàn thành");
+              const status = (s1 !== "" || s2 !== "" ? "Đã hoàn thành" : "Chờ thi đấu");
               return (
                 <tr key={r.stt} className="border-t border-slate-800/80 hover:bg-slate-800/35 align-top">
                   <td className="px-2 py-1.5 font-mono text-slate-500">{r.stt}</td>
