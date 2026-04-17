@@ -230,7 +230,24 @@ function calcStandings(group: Group): Standing[] {
   }
 
   rows.forEach((r) => (r.gd = r.gf - r.ga));
-  rows.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf || a.teamIdx - b.teamIdx);
+
+  const h2h = (a: Standing, b: Standing): number => {
+    const match = group.matches.find(
+      (m) =>
+        (m.team1Idx === a.teamIdx && m.team2Idx === b.teamIdx) ||
+        (m.team1Idx === b.teamIdx && m.team2Idx === a.teamIdx)
+    );
+    if (!match || match.score1 === "" || match.score2 === "") return 0;
+    const s1 = parseInt(match.score1);
+    const s2 = parseInt(match.score2);
+    if (isNaN(s1) || isNaN(s2)) return 0;
+    const aIsTeam1 = match.team1Idx === a.teamIdx;
+    const aScore = aIsTeam1 ? s1 : s2;
+    const bScore = aIsTeam1 ? s2 : s1;
+    return bScore - aScore; // negative → a wins (a ranks first)
+  };
+
+  rows.sort((a, b) => b.pts - a.pts || b.gd - a.gd || h2h(a, b) || a.teamIdx - b.teamIdx);
   return rows;
 }
 
@@ -424,7 +441,7 @@ function StandingsTable({
       <div
         className="grid text-[10px] font-black uppercase tracking-wider px-2 py-1.5"
         style={{
-          gridTemplateColumns: "1.2rem 1fr 2rem 2rem 2rem 2rem 2rem",
+          gridTemplateColumns: "1.2rem 1fr 2rem 2rem 2rem 2rem 2.5rem 2rem",
           background: "#0f172a",
           color: "#475569",
         }}
@@ -435,6 +452,7 @@ function StandingsTable({
         <span className="text-center">T</span>
         <span className="text-center">H</span>
         <span className="text-center">B</span>
+        <span className="text-center" style={{ color: "#f59e0b" }}>HS</span>
         <span className="text-center font-black" style={{ color: "#38bdf8" }}>Đ</span>
       </div>
 
@@ -447,7 +465,7 @@ function StandingsTable({
             key={row.team.id}
             className="grid items-center px-2 py-1.5 text-xs border-t border-slate-800"
             style={{
-              gridTemplateColumns: "1.2rem 1fr 2rem 2rem 2rem 2rem 2rem",
+              gridTemplateColumns: "1.2rem 1fr 2rem 2rem 2rem 2rem 2.5rem 2rem",
               background: qualified
                 ? "rgba(16,185,129,0.08)"
                 : isTop2 && playedRrCount > 0
@@ -475,6 +493,12 @@ function StandingsTable({
             <span className="text-center text-emerald-400">{row.won}</span>
             <span className="text-center text-slate-500">{row.drawn}</span>
             <span className="text-center text-red-400">{row.lost}</span>
+            <span
+              className="text-center font-semibold"
+              style={{ color: row.gd >= 0 ? "#f59e0b" : "#f87171" }}
+            >
+              {row.gd > 0 ? `+${row.gd}` : row.gd}
+            </span>
             <span
               className="text-center font-black"
               style={{ color: "#38bdf8" }}
@@ -594,7 +618,7 @@ function GroupCard({
 // ─── Data tables (JSON) ───────────────────────────────────────────────────────
 
 type MainTab = "male" | "mixed" | "schedule";
-type PairSubTab = "bracket";
+type PairSubTab = "bracket" | "knockout";
 
 function MixedCouplesTables() {
   const groups = mixedCouplesJson.mixed_couples;
@@ -907,6 +931,202 @@ function MatchScheduleTable({
         Tỉ số ở đây được cập nhật từ Google Sheets và hiển thị ở chế độ chỉ đọc. Hai tab bảng đấu đồng bộ tự động từ lịch này.
         Đôi Nam: Nhất/Nhì bảng và Ba 1–4 (4 hạng 3 tốt nhất) được tính tự động từ điểm vòng tròn.
       </p>
+    </div>
+  );
+}
+
+function KnockoutOverview({
+  rows,
+  maleData,
+  mixedData,
+  category,
+}: {
+  rows: ScheduleRow[];
+  maleData: TournamentData;
+  mixedData: TournamentData;
+  category: "Đôi Nam" | "Đôi Nam Nữ";
+}) {
+  const scoreLookup: KoScores = useMemo(() => {
+    const out: KoScores = {};
+    for (const r of rows) {
+      out[r.stt] = {
+        s1: toScoreString(r.score_team1),
+        s2: toScoreString(r.score_team2),
+      };
+    }
+    return out;
+  }, [rows]);
+
+  const { winner } = useMemo(
+    () =>
+      createWinnerLookup(
+        rows as { stt: number; match: string; category: string; players?: string }[],
+        maleData,
+        mixedData,
+        scoreLookup
+      ),
+    [rows, maleData, mixedData, scoreLookup]
+  );
+
+  const colors =
+    category === "Đôi Nam"
+      ? {
+          cardBg: "rgba(59,130,246,0.16)",
+          cardBorder: "rgba(59,130,246,0.35)",
+          stage: "#93c5fd",
+          line: "rgba(125,211,252,0.5)",
+        }
+      : {
+          cardBg: "rgba(236,72,153,0.16)",
+          cardBorder: "rgba(236,72,153,0.35)",
+          stage: "#f9a8d4",
+          line: "rgba(249,168,212,0.5)",
+        };
+
+  type StageConfig = {
+    title: string;
+    rows: ScheduleRow[];
+  };
+
+  const byStt = (arr: ScheduleRow[]) => [...arr].sort((a, b) => a.stt - b.stt);
+  const catRows = rows.filter((r) => normalizeBracketCategory(r.category) === category);
+
+  const stageConfigs: StageConfig[] =
+    category === "Đôi Nam"
+      ? [
+          { title: "Vòng 1/8", rows: byStt(catRows.filter((r) => r.stt >= 69 && r.stt <= 76)) },
+          { title: "Tứ kết", rows: byStt(catRows.filter((r) => r.stt >= 85 && r.stt <= 88)) },
+          { title: "Bán kết", rows: byStt(catRows.filter((r) => r.stt >= 93 && r.stt <= 94)) },
+          { title: "Chung kết", rows: byStt(catRows.filter((r) => r.stt === 97)) },
+        ]
+      : [
+          { title: "Tứ kết", rows: byStt(catRows.filter((r) => r.stt >= 89 && r.stt <= 92)) },
+          { title: "Bán kết", rows: byStt(catRows.filter((r) => r.stt >= 95 && r.stt <= 96)) },
+          { title: "Chung kết", rows: byStt(catRows.filter((r) => r.stt === 98)) },
+        ];
+
+  const stages = stageConfigs.filter((s) => s.rows.length > 0);
+  if (stages.length === 0) {
+    return (
+      <div className="rounded-xl border border-slate-700/70 p-4 text-sm text-slate-400">
+        Chưa có dữ liệu các trận knock-out.
+      </div>
+    );
+  }
+
+  const CARD_W = 240;
+  const CARD_H = 76;
+  const GAP_X = 110;
+  const HEADER_H = 56;
+  const firstStageCount = Math.max(1, stages[0].rows.length);
+  const TRACK_H = Math.max(360, firstStageCount * 90);
+  const TOTAL_W = stages.length * CARD_W + (stages.length - 1) * GAP_X;
+  const TOTAL_H = HEADER_H + TRACK_H;
+
+  const getCenterY = (stageIndex: number, matchIndex: number): number => {
+    const count = Math.max(1, stages[stageIndex].rows.length);
+    const slotH = TRACK_H / count;
+    return HEADER_H + slotH * (matchIndex + 0.5);
+  };
+
+  const cardX = (stageIndex: number) => stageIndex * (CARD_W + GAP_X);
+
+  return (
+    <div className="overflow-x-auto pb-2">
+      <div
+        className="relative rounded-2xl border border-slate-700/70 p-10"
+        style={{
+          width: TOTAL_W,
+          minHeight: TOTAL_H,
+          background: "radial-gradient(circle at top,#0f243c 0%,#0b1729 58%,#081220 100%)",
+        }}
+      >
+        <svg
+          className="absolute inset-0 pointer-events-none"
+          width={TOTAL_W}
+          height={TOTAL_H}
+          viewBox={`0 0 ${TOTAL_W} ${TOTAL_H}`}
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {stages.slice(0, -1).map((stage, sIdx) => {
+            const nextCount = stages[sIdx + 1].rows.length;
+            return Array.from({ length: nextCount }).map((_, i) => {
+              const topY = getCenterY(sIdx, i * 2);
+              const bottomY = getCenterY(sIdx, i * 2 + 1);
+              const nextY = getCenterY(sIdx + 1, i);
+              const xRight = cardX(sIdx) + CARD_W;
+              const xMid = xRight + GAP_X / 2;
+              const xNext = cardX(sIdx + 1);
+              return (
+                <g key={`line-${sIdx}-${i}`} stroke={colors.line} strokeWidth="2">
+                  <line x1={xRight} y1={topY} x2={xMid} y2={topY} />
+                  <line x1={xRight} y1={bottomY} x2={xMid} y2={bottomY} />
+                  <line x1={xMid} y1={topY} x2={xMid} y2={bottomY} />
+                  <line x1={xMid} y1={nextY} x2={xNext} y2={nextY} />
+                </g>
+              );
+            });
+          })}
+        </svg>
+
+        {stages.map((stage, sIdx) => (
+          <div key={stage.title}>
+            <div
+              className="absolute text-center"
+              style={{
+                left: cardX(sIdx),
+                top: 14,
+                width: CARD_W,
+              }}
+            >
+              <div className="text-[11px] font-black uppercase tracking-wider" style={{ color: colors.stage }}>
+                {stage.title}
+              </div>
+              <div className="text-[10px] text-slate-500">{stage.rows.length} trận</div>
+            </div>
+
+            {stage.rows.map((r, mIdx) => {
+              const rowIn = {
+                stt: r.stt,
+                match: r.match,
+                category: r.category,
+                players: r.players,
+              };
+              const sides = getDisplaySides(rowIn, maleData, mixedData, winner);
+              const s1 = toScoreString(r.score_team1);
+              const s2 = toScoreString(r.score_team2);
+              const hasScore = s1 !== "" || s2 !== "";
+              const top = getCenterY(sIdx, mIdx) - CARD_H / 2;
+              return (
+                <div
+                  key={r.stt}
+                  className="absolute rounded-xl p-2.5 border shadow-lg"
+                  style={{
+                    left: cardX(sIdx),
+                    top,
+                    width: CARD_W,
+                    minHeight: CARD_H,
+                    background: colors.cardBg,
+                    borderColor: colors.cardBorder,
+                    boxShadow: "0 6px 16px rgba(2,6,23,0.45)",
+                  }}
+                >
+                  <div className="text-[10px] text-slate-400 font-mono mb-1 flex justify-between">
+                    <span>Tr{r.stt}</span>
+                    <span className="text-amber-400">{r.time} • Sân {r.court}</span>
+                  </div>
+                  <div className="text-[11px] font-semibold text-slate-100 truncate">{sides.left}</div>
+                  <div className="text-[11px] font-semibold text-slate-100 truncate">{sides.right}</div>
+                  {/* <div className="mt-1 text-[10px] font-black text-emerald-300">
+                    {hasScore ? `${s1 || "0"} - ${s2 || "0"}` : "VS"}
+                  </div> */}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1302,6 +1522,7 @@ export default function BracketStage() {
             <div className="flex flex-wrap gap-2 mb-6">
               {([
                 { id: "bracket" as const, label: "Bảng đấu", Icon: LayoutGrid },
+                { id: "knockout" as const, label: "Sơ đồ Knockout", Icon: Trophy },
                 // { id: "roster" as const, label: "Danh sách đăng ký theo bảng", Icon: ClipboardList },
               ]).map(({ id, label, Icon }) => {
                 const active = maleSubTab === id;
@@ -1363,6 +1584,14 @@ export default function BracketStage() {
                 )}
               </>
             )}
+            {maleSubTab === "knockout" && (
+              <KnockoutOverview
+                rows={scheduleRows}
+                maleData={maleData}
+                mixedData={mixedData}
+                category="Đôi Nam"
+              />
+            )}
           </>
         )}
 
@@ -1393,6 +1622,7 @@ export default function BracketStage() {
               {([
                 // { id: "roster" as const, label: "Danh sách đăng ký theo bảng", Icon: ClipboardList },
                 { id: "bracket" as const, label: "Bảng đấu", Icon: LayoutGrid },
+                { id: "knockout" as const, label: "Sơ đồ Knockout", Icon: Trophy },
               ]).map(({ id, label, Icon }) => {
                 const active = mixedSubTab === id;
                 return (
@@ -1454,6 +1684,14 @@ export default function BracketStage() {
                   </div>
                 )}
               </>
+            )}
+            {mixedSubTab === "knockout" && (
+              <KnockoutOverview
+                rows={scheduleRows}
+                maleData={maleData}
+                mixedData={mixedData}
+                category="Đôi Nam Nữ"
+              />
             )}
           </>
         )}
