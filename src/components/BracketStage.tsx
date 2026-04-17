@@ -618,7 +618,7 @@ function GroupCard({
 // ─── Data tables (JSON) ───────────────────────────────────────────────────────
 
 type MainTab = "male" | "mixed" | "schedule";
-type PairSubTab = "bracket" | "knockout";
+type PairSubTab = "bracket" | "knockout" | "roster";
 
 function MixedCouplesTables() {
   const groups = mixedCouplesJson.mixed_couples;
@@ -1538,6 +1538,7 @@ export default function BracketStage() {
 
             <div className="flex flex-wrap gap-2 mb-6">
               {([
+                { id: "roster" as const, label: "Danh sách đăng ký theo bảng", Icon: ClipboardList },
                 { id: "bracket" as const, label: "Bảng đấu", Icon: LayoutGrid },
                 { id: "knockout" as const, label: "Sơ đồ Knockout", Icon: Trophy },
                 // { id: "roster" as const, label: "Danh sách đăng ký theo bảng", Icon: ClipboardList },
@@ -1569,6 +1570,7 @@ export default function BracketStage() {
                 );
               })}
             </div>
+            {maleSubTab === "roster" && <MaleCouplesRosterTables />}
 
             {maleSubTab === "bracket" && (
               <>
@@ -1637,7 +1639,7 @@ export default function BracketStage() {
 
             <div className="flex flex-wrap gap-2 mb-6">
               {([
-                // { id: "roster" as const, label: "Danh sách đăng ký theo bảng", Icon: ClipboardList },
+                { id: "roster" as const, label: "Danh sách đăng ký theo bảng", Icon: ClipboardList },
                 { id: "bracket" as const, label: "Bảng đấu", Icon: LayoutGrid },
                 { id: "knockout" as const, label: "Sơ đồ Knockout", Icon: Trophy },
               ]).map(({ id, label, Icon }) => {
@@ -1646,7 +1648,7 @@ export default function BracketStage() {
                   <button
                     key={id}
                     type="button"
-                    onClick={() => setMixedSubTab(id)}
+                    onClick={() => setMixedSubTab(id as PairSubTab)}
                     className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-bold transition-all duration-150"
                     style={
                       active
@@ -1669,7 +1671,7 @@ export default function BracketStage() {
               })}
             </div>
 
-            {/* {mixedSubTab === "roster" && <MixedCouplesTables />} */}
+            {mixedSubTab === "roster" && <MixedCouplesTables />}
 
             {mixedSubTab === "bracket" && (
               <>
