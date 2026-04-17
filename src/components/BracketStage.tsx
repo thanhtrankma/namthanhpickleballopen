@@ -776,19 +776,37 @@ function QualifiersPanel({
         </div>
         <div className="mt-4 pt-3 border-t border-slate-700/60">
           <div className="text-[10px] font-black uppercase tracking-wider text-sky-500/95 mb-2">
-            Hạng 3 (4 suất) — xếp tự động theo điểm đã nhập ở tab Lịch thi đấu (Đôi Nam)
+            Hạng 3 (6 đội) — xếp theo Điểm → Hiệu số → Đối đầu
           </div>
           <div className="flex flex-col gap-1.5">
             {sortedThirdPlacesDetailed(maleData)
-              .slice(0, 4)
               .map((row, i) => (
-                <span key={`${row.team.id}-ba-${i}`} className="text-slate-200 text-xs">
-                  <span className="text-slate-500">Ba {i + 1}:</span>{" "}
-                  <span className="font-semibold text-sky-200">{row.team.name}</span>
-                  <span className="text-slate-500 ml-1">
-                    (bảng {row.groupLetter}) ({row.pts}đ)
-                  </span>
-                </span>
+                <div
+                  key={`${row.team.id}-ba-${i}`}
+                  className="text-slate-200 text-xs rounded-md px-2 py-1 border"
+                  style={{
+                    background: i < 4 ? "rgba(14,165,233,0.08)" : "rgba(148,163,184,0.06)",
+                    borderColor: i < 4 ? "rgba(56,189,248,0.28)" : "rgba(148,163,184,0.2)",
+                  }}
+                >
+                  <div>
+                    <span className="text-slate-500">Ba {i + 1}:</span>{" "}
+                    <span className="font-semibold text-sky-200">{row.team.name}</span>
+                    <span className="text-slate-500 ml-1">
+                      (bảng {row.groupLetter})
+                    </span>
+                    <span className="ml-2 text-[10px] font-bold" style={{ color: i < 4 ? "#22d3ee" : "#94a3b8" }}>
+                      {i < 4 ? "Vào knock-out" : "Dự bị"}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">
+                    Điểm: <span className="text-slate-200 font-semibold">{row.pts}</span> | HS:{" "}
+                    <span className={`font-semibold ${row.gd >= 0 ? "text-amber-300" : "text-red-300"}`}>
+                      {row.gd > 0 ? `+${row.gd}` : row.gd}
+                    </span>{" "}
+                    | Đối đầu: <span className="text-slate-300">{row.headToHeadSummary}</span>
+                  </div>
+                </div>
               ))}
           </div>
         </div>
@@ -1096,7 +1114,6 @@ function KnockoutOverview({
               const sides = getDisplaySides(rowIn, maleData, mixedData, winner);
               const s1 = toScoreString(r.score_team1);
               const s2 = toScoreString(r.score_team2);
-              const hasScore = s1 !== "" || s2 !== "";
               const top = getCenterY(sIdx, mIdx) - CARD_H / 2;
               return (
                 <div
@@ -1119,7 +1136,7 @@ function KnockoutOverview({
                   <div className="text-[11px] font-semibold text-slate-100 truncate">{sides.left}</div>
                   <div className="text-[11px] font-semibold text-slate-100 truncate">{sides.right}</div>
                   {/* <div className="mt-1 text-[10px] font-black text-emerald-300">
-                    {hasScore ? `${s1 || "0"} - ${s2 || "0"}` : "VS"}
+                    {s1 !== "" || s2 !== "" ? `${s1 || "0"} - ${s2 || "0"}` : "VS"}
                   </div> */}
                 </div>
               );

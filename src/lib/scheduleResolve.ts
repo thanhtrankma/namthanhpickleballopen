@@ -91,10 +91,28 @@ export function calcStandings(group: SchedGroup): StandingRow[] {
   rows.forEach((r) => {
     r.gd = r.gf - r.ga;
   });
+
+  const headToHeadDiff = (a: StandingRow, b: StandingRow): number => {
+    const match = group.matches.find(
+      (m) =>
+        (m.team1Idx === a.teamIdx && m.team2Idx === b.teamIdx) ||
+        (m.team1Idx === b.teamIdx && m.team2Idx === a.teamIdx)
+    );
+    if (!match || match.score1 === "" || match.score2 === "") return 0;
+    const s1 = parseInt(match.score1, 10);
+    const s2 = parseInt(match.score2, 10);
+    if (isNaN(s1) || isNaN(s2)) return 0;
+    const aIsTeam1 = match.team1Idx === a.teamIdx;
+    const aScore = aIsTeam1 ? s1 : s2;
+    const bScore = aIsTeam1 ? s2 : s1;
+    return bScore - aScore; // negative => a thắng đối đầu
+  };
+
   rows.sort(
     (a, b) =>
       b.pts - a.pts ||
       b.gd - a.gd ||
+      headToHeadDiff(a, b) ||
       b.gf - a.gf ||
       a.teamIdx - b.teamIdx
   );
@@ -142,10 +160,42 @@ export interface ThirdPlaceRow {
   pts: number;
   gd: number;
   gf: number;
+  headToHeadSummary: string;
 }
 
 /** Một đội hạng 3 mỗi bảng, sắp xếp theo thành tích (Ba 1 = tốt nhất) */
 export function sortedThirdPlacesDetailed(data: SchedTournament): ThirdPlaceRow[] {
+  const headToHeadSummaryFor = (
+    group: SchedGroup,
+    standings: StandingRow[],
+    target: StandingRow
+  ): string => {
+    const ties = standings.filter(
+      (x) => x.teamIdx !== target.teamIdx && x.pts === target.pts && x.gd === target.gd
+    );
+    if (ties.length === 0) return "—";
+
+    const details: string[] = [];
+    for (const opp of ties) {
+      const m = group.matches.find(
+        (match) =>
+          (match.team1Idx === target.teamIdx && match.team2Idx === opp.teamIdx) ||
+          (match.team1Idx === opp.teamIdx && match.team2Idx === target.teamIdx)
+      );
+      if (!m || m.score1 === "" || m.score2 === "") continue;
+      const s1 = parseInt(m.score1, 10);
+      const s2 = parseInt(m.score2, 10);
+      if (isNaN(s1) || isNaN(s2)) continue;
+      const targetIsTeam1 = m.team1Idx === target.teamIdx;
+      const tScore = targetIsTeam1 ? s1 : s2;
+      const oScore = targetIsTeam1 ? s2 : s1;
+      const result = tScore > oScore ? "thắng" : tScore < oScore ? "thua" : "hòa";
+      details.push(`${result} ${opp.team.id} (${tScore}-${oScore})`);
+    }
+
+    return details.length > 0 ? details.join("; ") : "—";
+  };
+
   const thirds: ThirdPlaceRow[] = [];
   for (const g of data) {
     const s = calcStandings(g);
@@ -157,10 +207,24 @@ export function sortedThirdPlacesDetailed(data: SchedTournament): ThirdPlaceRow[
         pts: row.pts,
         gd: row.gd,
         gf: row.gf,
+        headToHeadSummary: headToHeadSummaryFor(g, s, row),
       });
     }
   }
-  thirds.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+  const thirdHeadToHeadDiff = (a: ThirdPlaceRow, b: ThirdPlaceRow): number => {
+    // Hạng 3 mỗi bảng chỉ có 1 đội, nên thông thường không có đối đầu trực tiếp giữa a/b.
+    // Giữ comparator này để bám đúng thứ tự ưu tiên: điểm -> hiệu số -> đối đầu.
+    if (a.groupLetter !== b.groupLetter) return 0;
+    return 0;
+  };
+
+  thirds.sort(
+    (a, b) =>
+      b.pts - a.pts ||
+      b.gd - a.gd ||
+      thirdHeadToHeadDiff(a, b) ||
+      b.gf - a.gf
+  );
   return thirds;
 }
 
