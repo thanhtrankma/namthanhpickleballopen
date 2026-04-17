@@ -114,9 +114,16 @@ export default function HomeLanding() {
               </p>
               <p className="mt-3 text-sm text-white/95 leading-snug">
                 <span className="text-white/70 text-[11px] uppercase tracking-wider block mb-1">
-                  Địa chỉ
+                  Địa chỉ (click để xem bản đồ)
                 </span>
-                237 Phú Viên, Long Biên, Hà Nội
+                <a
+                  href="https://maps.app.goo.gl/8PP2ezQWcAVa7AUVA"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-900/95 hover:text-amber-200 transition-colors"
+                >
+                  237 Phú Viên, Long Biên, Hà Nội
+                </a>
               </p>
               <p className="mt-4 pt-3 border-t border-white/15 text-xs text-amber-100/95">
                 Đơn vị tổ chức: <strong className="text-white">Nam Thanh Travel</strong>
