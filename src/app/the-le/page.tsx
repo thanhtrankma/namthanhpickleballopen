@@ -105,7 +105,7 @@ export default function TheLePage() {
               Cách tính điểm: <strong>Thắng: 1 điểm</strong> — <strong>Thua: 0 điểm</strong>.
             </li>
             <li>Mỗi trận thi đấu chạm 11 điểm.</li>
-            <li>Nếu 2 đội bằng điểm: xét thành tích đối đầu trực tiếp.</li>
+            <li>Nếu 2 đội bằng điểm: xét hiệu số, thành tích đối đầu trực tiếp, bốc thăm.</li>
           </ul>
           <SubHeading>Vé vào vòng Tứ kết</SubHeading>
           <RuleLine>
@@ -136,7 +136,7 @@ export default function TheLePage() {
               Cách tính điểm: <strong>Thắng: 1 điểm</strong> — <strong>Thua: 0 điểm</strong>.
             </li>
             <li>Mỗi trận thi đấu chạm 11 điểm.</li>
-            <li>Nếu 2 đội bằng điểm: xét thành tích đối đầu trực tiếp.</li>
+            <li>Nếu 2 đội bằng điểm: xét hiệu số, thành tích đối đầu trực tiếp, bốc thăm.</li>
           </ul>
           <SubHeading>Vé vào vòng knock-out</SubHeading>
           <RuleLine>
@@ -190,7 +190,7 @@ export default function TheLePage() {
         {/* Rules */}
         <SectionCard icon={Shield} title="Quy định trong thi đấu" color="#ef4444">
           <ul className="space-y-0">
-            <Rule index={1} text="Các đội phải có mặt tại sân thi đấu trước 30 phút. Trễ quá 15 phút kể từ giờ thi đấu sẽ bị xử thua." />
+            <Rule index={1} text="Các đội phải có mặt tại sân thi đấu trước 30 phút. Trễ quá 5 phút kể từ giờ thi đấu sẽ bị xử thua." />
             <Rule index={2} text="Trang phục thi đấu đồng màu, in số áo rõ ràng. Không mặc áo có hình ảnh, thông điệp phản cảm." />
             <Rule index={3} text="Tuyệt đối không có hành vi bạo lực, xúc phạm đối thủ, trọng tài hoặc ban tổ chức." />
             <Rule index={4} text="Quyết định của Trọng tài và Ban Tổ chức là quyết định cuối cùng và không thể kháng cáo." />
